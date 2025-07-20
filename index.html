@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Partyservice Kleinfeldt – Auftragsplaner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: auto; }
+    h1, h2 { color: #444; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+    button { margin-top: 15px; padding: 10px 15px; font-size: 16px; }
+    .auftrag { border: 1px solid #ccc; padding: 15px; margin-top: 20px; background: #f9f9f9; }
+  </style>
+</head>
+<body>
+  <h1>Partyservice Kleinfeldt – Auftragsplaner</h1>
+
+  <form id="auftragForm">
+    <label>Kundenname</label>
+    <input type="text" id="kunde" required>
+
+    <label>Lieferdatum</label>
+    <input type="date" id="datum" required>
+    <p id="wochentag"></p>
+
+    <label>Gesamtpersonen</label>
+    <input type="number" id="personen" required>
+
+    <label>Speise</label>
+    <select id="speise">
+      <option value="Spanferkel">Spanferkel</option>
+      <option value="BBQ Spanferkel">BBQ Spanferkel</option>
+      <option value="Grillschinken">Grillschinken</option>
+    </select>
+
+    <label>Beilage</label>
+    <select id="beilage">
+      <optgroup label="Kartoffelbeilagen">
+        <option>Kartoffelgratin</option>
+        <option>Röstkartoffeln</option>
+        <option>Kartoffelspalten</option>
+        <option>Kartoffelpüree</option>
+        <option>Bratkartoffeln</option>
+        <option>Salzkartoffeln</option>
+        <option>Reis</option>
+      </optgroup>
+      <optgroup label="Gemüse">
+        <option>Geschmortes Kraut</option>
+        <option>Bunte Gemüseauswahl</option>
+        <option>Rotkohl</option>
+      </optgroup>
+      <optgroup label="Salate">
+        <option>Weißkrautsalat Natur</option>
+        <option>Weißkrautsalat mit Yogurt</option>
+        <option>Frischer gemischter Salat</option>
+        <option>Eisberg-Melonen Salat</option>
+        <option>Griechischer Salat</option>
+        <option>Kartoffelsalat</option>
+        <option>Speckkartoffelsalat</option>
+        <option>Nudelsalat</option>
+      </optgroup>
+    </select>
+
+    <label>Lieferort</label>
+    <input type="text" id="ort">
+
+    <label>Lieferzeit</label>
+    <input type="time" id="zeit">
+
+    <label>Telefonnummer</label>
+    <input type="tel" id="telefon">
+
+    <button type="submit">Auftrag speichern</button>
+  </form>
+
+  <div id="auftragListe"></div>
+
+  <script>
+    const form = document.getElementById("auftragForm");
+    const wochentag = document.getElementById("wochentag");
+    const auftragListe = document.getElementById("auftragListe");
+
+    document.getElementById("datum").addEventListener("change", (e) => {
+      const tag = new Date(e.target.value).toLocaleDateString("de-DE", { weekday: "long" });
+      wochentag.textContent = `Wochentag: ${tag}`;
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const auftrag = {
+        kunde: document.getElementById("kunde").value,
+        datum: document.getElementById("datum").value,
+        personen: parseInt(document.getElementById("personen").value),
+        speise: document.getElementById("speise").value,
+        beilage: document.getElementById("beilage").value,
+        ort: document.getElementById("ort").value,
+        zeit: document.getElementById("zeit").value,
+        telefon: document.getElementById("telefon").value,
+      };
+
+      const div = document.createElement("div");
+      div.className = "auftrag";
+      div.innerHTML = `<strong>${auftrag.kunde}</strong><br>
+        Datum: ${auftrag.datum} (${new Date(auftrag.datum).toLocaleDateString("de-DE", { weekday: "long" })})<br>
+        Personen: ${auftrag.personen}<br>
+        Gericht: ${auftrag.speise}<br>
+        Beilage: ${auftrag.beilage}<br>
+        Lieferzeit: ${auftrag.zeit}<br>
+        Ort: ${auftrag.ort}<br>
+        Telefon: ${auftrag.telefon}`;
+
+      auftragListe.appendChild(div);
+      form.reset();
+      wochentag.textContent = "";
+    });
+  </script>
+</body>
+</html>
