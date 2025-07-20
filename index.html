@@ -3,7 +3,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Partyservice Kleinfeldt – Auftragsplaner V9</title>
+  <title>Partyservice Kleinfeldt – Auftragsplaner V10</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px; max-width: 1000px; margin: auto; }
@@ -173,9 +173,15 @@
     const farbenMap = {};
     let farbCounter = 0;
     const beilageSummen = {};
+    const hauptspeisenSummen = {};
 
     const gerichte = document.querySelectorAll(".gericht-block");
     gerichte.forEach(g => {
+      const speise = g.querySelector("select").value;
+      const pAnz = parseInt(g.querySelector("input").value);
+      if (!hauptspeisenSummen[speise]) hauptspeisenSummen[speise] = 0;
+      hauptspeisenSummen[speise] += pAnz;
+
       const bblocks = g.querySelectorAll(".beilage-block");
       bblocks.forEach(bb => {
         const b = bb.querySelector("select").value;
@@ -188,7 +194,13 @@
     const div = document.createElement("div");
     div.className = "auftrag";
 
-    let beilageText = "";
+    let hauptText = "<strong>Hauptspeisen:</strong><br>";
+    for (const [gericht, p] of Object.entries(hauptspeisenSummen)) {
+      const kg = (p * 250) / 1000;
+      hauptText += `• ${gericht} (${p} P.) → ${kg.toFixed(2)} kg<br>`;
+    }
+
+    let beilageText = "<strong>Beilagen:</strong><br>";
     for (const [b, p] of Object.entries(beilageSummen)) {
       if (!farbenMap[b]) farbenMap[b] = farben[farbCounter++ % farben.length];
       const g = beilageGramm[b] || 150;
@@ -202,9 +214,10 @@
       ${loeschBtn}
       <strong>${kunde}</strong><br>
       Datum: ${datum}<br>
-      Gesamtpersonen: ${personen}<br>
+      Gesamtpersonen: ${personen}<br><br>
+      ${hauptText}<br>
       ${beilageText}<br>
-      Lieferzeit: ${zeit}<br>
+      <br>Lieferzeit: ${zeit}<br>
       Ort: ${ort}<br>
       Telefon: ${telefon}<br>
       Notizen: ${notizen}
