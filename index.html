@@ -24,7 +24,7 @@
     }
   </style>
 </head>
-<body>
+<body><header><img alt="Logo" src="logo.png" style="height: 40px; margin: 10px;"/></header>
 <h1>Auftrag erfassen (V24)</h1>
 <div class="block">
 <form id="auftragForm">
@@ -232,5 +232,41 @@ function removeBlock(button) {
     }
 }
 </script>
-</body>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const auftraege = JSON.parse(localStorage.getItem('auftraege') || '[]');
+    const zusammenfassung = document.getElementById("auftragsliste");
+    zusammenfassung.innerHTML = "";
+    auftraege.forEach((auftrag, index) => {
+        const container = document.createElement("div");
+        container.classList.add("auftrag-container");
+        container.innerHTML = `
+            <pre>${formatAuftrag(auftrag)}</pre>
+            <button onclick="bearbeiten(${index})">✏️ Bearbeiten</button>
+            <button onclick="loeschen(${index})">🗑️ Löschen</button>
+            <hr>
+        `;
+        zusammenfassung.appendChild(container);
+    });
+});
+
+function bearbeiten(index) {
+    const auftraege = JSON.parse(localStorage.getItem('auftraege') || '[]');
+    const auftrag = auftraege[index];
+    localStorage.setItem('editIndex', index);
+    localStorage.setItem('editData', JSON.stringify(auftrag));
+    location.reload();
+}
+
+function loeschen(index) {
+    let auftraege = JSON.parse(localStorage.getItem('auftraege') || '[]');
+    auftraege.splice(index, 1);
+    localStorage.setItem('auftraege', JSON.stringify(auftraege));
+    location.reload();
+}
+
+function formatAuftrag(auftrag) {
+    return "Kunde: " + auftrag.kunde + "\nDatum: " + auftrag.datum + " (" + auftrag.wochentag + ")" + "\nUhrzeit: " + auftrag.uhrzeit + "\n...weitere Inhalte...";
+}
+</script></body>
 </html>
