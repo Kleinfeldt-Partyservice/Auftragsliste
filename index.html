@@ -3,7 +3,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Partyservice Kleinfeldt – V20</title>
+  <title>Partyservice Kleinfeldt – V21</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; font-size: 12px; background: #f9f9f9; padding: 10px; max-width: 1000px; margin: auto; }
@@ -44,6 +44,7 @@
 <div id="auftragListe"></div>
 
 <script>
+const auftraege = [];
 const farben = ["#ffcccc", "#ccffcc", "#ccccff", "#ffffcc", "#ffccff", "#ccffff"];
 const beilageFarben = new Map();
 let farbIndex = 0;
@@ -110,25 +111,20 @@ document.getElementById("auftragForm").addEventListener("submit", function(e) {
   e.preventDefault();
   const kunde = document.getElementById("kunde").value;
   const datum = document.getElementById("datum").value;
-  const personen = parseInt(document.getElementById("personen").value);
   const ort = document.getElementById("ort").value;
   const zeit = document.getElementById("zeit").value;
   const telefon = document.getElementById("telefon").value;
   const notizen = document.getElementById("notizen").value;
 
-  let speisenOutput = "";
-  let beilagenMap = new Map();
-  let speisenMap = new Map();
+  const speisen = [];
+  const beilagenMap = new Map();
 
   document.querySelectorAll(".gericht-block").forEach(g => {
     const name = g.querySelector("select").value;
     const p = parseInt(g.querySelector("input").value);
-    if (!speisenMap.has(name)) speisenMap.set(name, 0);
-    speisenMap.set(name, speisenMap.get(name) + p);
+    speisen.push({ name, personen: p });
 
-    speisenOutput += `<p><strong>${name}</strong> für ${p} Personen</p>`;
-    const beilagen = g.querySelectorAll(".beilage-block");
-    beilagen.forEach(b => {
+    g.querySelectorAll(".beilage-block").forEach(b => {
       const bname = b.querySelector("select").value;
       const bp = parseInt(b.querySelector("input").value);
       const key = bname.toLowerCase();
@@ -137,32 +133,50 @@ document.getElementById("auftragForm").addEventListener("submit", function(e) {
     });
   });
 
-  let mengen = "";
-  speisenMap.forEach((anzahl, name) => {
-    const gramm = name.toLowerCase().includes("spanferkel") ? 650 : 250;
-    mengen += `<span class="highlight">${name}: ${(anzahl * gramm / 1000).toFixed(2)} kg Fleisch</span> `;
-  });
-
-  beilagenMap.forEach((anzahl, name) => {
-    const gramm = name.includes("geschmortes kraut") ? 150 : 250;
-    mengen += `<span class="highlight" style="background-color:${getBeilageFarbe(name)}">${name}: ${(anzahl * gramm / 1000).toFixed(2)} kg</span> `;
-  });
-
-  const output = document.createElement("div");
-  output.className = "auftrag";
-  output.innerHTML = `
-    <button class="loeschen-btn" onclick="this.parentElement.remove()">X</button>
-    <h3>${kunde}</h3>
-    <p><strong>Lieferdatum:</strong> ${formatDatumMitWochentag(datum)}<br>
-    <strong>Ort:</strong> ${ort}, <strong>Zeit:</strong> ${zeit}, <strong>Tel:</strong> ${telefon}</p>
-    <p><strong>Notizen:</strong> ${notizen}</p>
-    ${speisenOutput}
-    <p><strong>Mengenübersicht:</strong><br>${mengen}</p>
-  `;
-  document.getElementById("auftragListe").appendChild(output);
+  auftraege.push({ kunde, datum, zeit, ort, telefon, notizen, speisen, beilagen: beilagenMap });
+  zeigeAuftraege();
   this.reset();
   document.getElementById("gerichteContainer").innerHTML = "";
 });
+
+function zeigeAuftraege() {
+  auftraege.sort((a, b) => {
+    const da = new Date(`${a.datum}T${a.zeit}`);
+    const db = new Date(`${b.datum}T${b.zeit}`);
+    return da - db;
+  });
+
+  const liste = document.getElementById("auftragListe");
+  liste.innerHTML = "";
+  auftraege.forEach(a => {
+    let mengen = "";
+    a.speisen.forEach(s => {
+      const gramm = s.name.toLowerCase().includes("spanferkel") ? 650 : 250;
+      mengen += `<span class="highlight">${s.name}: ${(s.personen * gramm / 1000).toFixed(2)} kg Fleisch</span> `;
+    });
+
+    a.beilagen.forEach((personen, name) => {
+      const gramm = name.includes("geschmortes kraut") ? 150 : 250;
+      const farbe = getBeilageFarbe(name);
+      mengen += `<span class="highlight" style="background-color:${farbe}">${name}: ${(personen * gramm / 1000).toFixed(2)} kg</span> `;
+    });
+
+    let speisenText = a.speisen.map(s => `<strong>${s.name}</strong> für ${s.personen} Personen`).join("<br>");
+
+    const div = document.createElement("div");
+    div.className = "auftrag";
+    div.innerHTML = `
+      <button class="loeschen-btn" onclick="this.parentElement.remove()">X</button>
+      <h3>${a.kunde}</h3>
+      <p><strong>Lieferdatum:</strong> ${formatDatumMitWochentag(a.datum)} | Uhrzeit: ${a.zeit}</p>
+      <p><strong>Ort:</strong> ${a.ort} | <strong>Telefon:</strong> ${a.telefon}</p>
+      <p><strong>Notizen:</strong> ${a.notizen}</p>
+      <p>${speisenText}</p>
+      <p><strong>Mengenübersicht:</strong><br>${mengen}</p>
+    `;
+    liste.appendChild(div);
+  });
+}
 </script>
 </body>
 </html>
