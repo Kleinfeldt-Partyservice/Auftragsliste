@@ -1,12 +1,11 @@
 
 <!DOCTYPE html>
-
 <html lang="de">
 <head>
-<meta charset="utf-8"/>
-<title>Partyservice Kleinfeldt – V24</title>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<style>
+  <meta charset="UTF-8">
+  <title>Partyservice Kleinfeldt – V24</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
     body { font-family: sans-serif; background: #f6f6f6; padding: 20px; }
     h1, h2 { color: #444; }
     .block { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 6px rgba(0,0,0,0.1); }
@@ -24,41 +23,45 @@
     }
   </style>
 </head>
-<body><header><img alt="Logo" src="logo.png" style="height: 40px; margin: 10px;"/></header>
-<h1>Auftrag erfassen (V24)</h1>
-<div class="block">
-<form id="auftragForm">
-<label>Kundenname: <input id="kunde" required=""/></label>
-<label>Lieferdatum: <input id="datum" required="" type="date"/></label>
-<label>Uhrzeit: <input id="zeit" type="time"/></label>
-<label>Lieferort: <input id="ort"/></label>
-<label>Telefonnummer: <input id="telefon"/></label>
-<label>Notizen: <textarea id="notizen" rows="2"></textarea></label>
-<h2>Vorspeise</h2>
-<label>
+<body>
+  <h1>Auftrag erfassen (V24)</h1>
+  <div class="block">
+    <form id="auftragForm">
+      <label>Kundenname: <input required id="kunde" /></label>
+      <label>Lieferdatum: <input type="date" id="datum" required></label>
+      <label>Uhrzeit: <input type="time" id="zeit"></label>
+      <label>Lieferort: <input id="ort" /></label>
+      <label>Telefonnummer: <input id="telefon" /></label>
+      <label>Notizen: <textarea id="notizen" rows="2"></textarea></label>
+
+      <h2>Vorspeise</h2>
+      <label>
         Vorspeise wählen:
         <select id="vorspeise">
-<option value="">Keine</option>
-<option>Currywurst</option>
-<option>Gulaschsuppe</option>
-<option>Kartoffelsuppe mit Würstchen</option>
-<option>Kartoffelsuppe Vegetarisch</option>
-<option>Lauch Hack Suppe</option>
-<option>Chilli Con Carne</option>
-<option>Chilli Sin Carne</option>
-<option>Broccolicremesuppe</option>
-</select>
-</label>
-<label>Personenanzahl Vorspeise: <input id="vorspeisePersonen" min="0" type="number"/></label>
-<label><input id="vorspeiseBrot" type="checkbox"/> Brot dazu?</label>
-<div id="speisenWrapper"></div>
-<button onclick="addSpeise()" type="button">+ Speise/Beilage hinzufügen</button><br/><br/>
-<button type="submit">✔ Auftrag speichern</button>
-</form>
-</div>
-<h2>Auftragsübersicht</h2>
-<div class="block" id="liste"></div>
-<script>
+          <option value="">Keine</option>
+          <option>Currywurst</option>
+          <option>Gulaschsuppe</option>
+          <option>Kartoffelsuppe mit Würstchen</option>
+          <option>Kartoffelsuppe Vegetarisch</option>
+          <option>Lauch Hack Suppe</option>
+          <option>Chilli Con Carne</option>
+          <option>Chilli Sin Carne</option>
+          <option>Broccolicremesuppe</option>
+        </select>
+      </label>
+      <label>Personenanzahl Vorspeise: <input type="number" min="0" id="vorspeisePersonen"></label>
+      <label><input type="checkbox" id="vorspeiseBrot"> Brot dazu?</label>
+
+      <div id="speisenWrapper"></div>
+      <button type="button" onclick="addSpeise()">+ Speise/Beilage hinzufügen</button><br><br>
+      <button type="submit">✔ Auftrag speichern</button>
+    </form>
+  </div>
+
+  <h2>Auftragsübersicht</h2>
+  <div id="liste" class="block"></div>
+
+  <script>
     let auftraege = [];
 
     const HAUPTSPEISEN = [
@@ -88,31 +91,8 @@
         <div class="beilagen-container">
           <label>Beilage:
             <select name="beilage">
-<optgroup label="Kartoffelbeilagen">
-  <option>Kartoffelpüree</option>
-  <option>Kartoffelgratin</option>
-  <option>Bratkartoffeln</option>
-  <option>Röstkartoffeln</option>
-  <option>Kartoffelspalten</option>
-  <option>Salzkartoffeln</option>
-  <option>Reis</option>
-</optgroup>
-<optgroup label="Gemüse">
-  <option>Bunte Gemüseauswahl</option>
-  <option>Rotkohl</option>
-  <option>geschmortes Kraut</option>
-</optgroup>
-<optgroup label="Salate">
-  <option>Weißkrautsalat Natur</option>
-  <option>Weißkrautsalat mit Yogurt angemacht</option>
-  <option>frischer gemischter Salat</option>
-  <option>Eisberg-Melonen Salat</option>
-  <option>Griechischer Salat</option>
-  <option>Kartoffelsalat</option>
-  <option>Speckkartoffelsalat</option>
-  <option>Nudelsalat</option>
-</optgroup>
-</select>
+              ${BEILAGEN.map(b => `<option>${b}</option>`).join("")}
+            </select>
             <input type="number" min="1" name="beilagePersonen" placeholder="Personen">
           </label>
         </div>
@@ -128,31 +108,8 @@
       div.innerHTML = `
         <label>Beilage:
           <select name="beilage">
-<optgroup label="Kartoffelbeilagen">
-  <option>Kartoffelpüree</option>
-  <option>Kartoffelgratin</option>
-  <option>Bratkartoffeln</option>
-  <option>Röstkartoffeln</option>
-  <option>Kartoffelspalten</option>
-  <option>Salzkartoffeln</option>
-  <option>Reis</option>
-</optgroup>
-<optgroup label="Gemüse">
-  <option>Bunte Gemüseauswahl</option>
-  <option>Rotkohl</option>
-  <option>geschmortes Kraut</option>
-</optgroup>
-<optgroup label="Salate">
-  <option>Weißkrautsalat Natur</option>
-  <option>Weißkrautsalat mit Yogurt angemacht</option>
-  <option>frischer gemischter Salat</option>
-  <option>Eisberg-Melonen Salat</option>
-  <option>Griechischer Salat</option>
-  <option>Kartoffelsalat</option>
-  <option>Speckkartoffelsalat</option>
-  <option>Nudelsalat</option>
-</optgroup>
-</select>
+            ${BEILAGEN.map(b => `<option>${b}</option>`).join("")}
+          </select>
           <input type="number" min="1" name="beilagePersonen" placeholder="Personen">
         </label>
       `;
@@ -224,49 +181,6 @@
     });
 
     window.onload = () => addSpeise();
-  
-function removeBlock(button) {
-    const block = button.closest('.dynamic-block');
-    if (block) {
-        block.remove();
-    }
-}
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const auftraege = JSON.parse(localStorage.getItem('auftraege') || '[]');
-    const zusammenfassung = document.getElementById("auftragsliste");
-    zusammenfassung.innerHTML = "";
-    auftraege.forEach((auftrag, index) => {
-        const container = document.createElement("div");
-        container.classList.add("auftrag-container");
-        container.innerHTML = `
-            <pre>${formatAuftrag(auftrag)}</pre>
-            <button onclick="bearbeiten(${index})">✏️ Bearbeiten</button>
-            <button onclick="loeschen(${index})">🗑️ Löschen</button>
-            <hr>
-        `;
-        zusammenfassung.appendChild(container);
-    });
-});
-
-function bearbeiten(index) {
-    const auftraege = JSON.parse(localStorage.getItem('auftraege') || '[]');
-    const auftrag = auftraege[index];
-    localStorage.setItem('editIndex', index);
-    localStorage.setItem('editData', JSON.stringify(auftrag));
-    location.reload();
-}
-
-function loeschen(index) {
-    let auftraege = JSON.parse(localStorage.getItem('auftraege') || '[]');
-    auftraege.splice(index, 1);
-    localStorage.setItem('auftraege', JSON.stringify(auftraege));
-    location.reload();
-}
-
-function formatAuftrag(auftrag) {
-    return "Kunde: " + auftrag.kunde + "\nDatum: " + auftrag.datum + " (" + auftrag.wochentag + ")" + "\nUhrzeit: " + auftrag.uhrzeit + "\n...weitere Inhalte...";
-}
-</script></body>
+  </script>
+</body>
 </html>
