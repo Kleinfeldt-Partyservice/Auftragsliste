@@ -227,6 +227,13 @@
     });
 
     window.onload = () => addSpeise();
-  </script>
+  
+function removeBlock(button) {
+    const block = button.closest('.dynamic-block');
+    if (block) {
+        block.remove();
+    }
+}
+</script>
 </body>
 </html>
