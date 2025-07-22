@@ -1,186 +1,341 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Partyservice Kleinfeldt – V24</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partyservice Kleinfeldt - Auftragsverwaltung</title>
   <style>
-    body { font-family: sans-serif; background: #f6f6f6; padding: 20px; }
-    h1, h2 { color: #444; }
-    .block { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 6px rgba(0,0,0,0.1); }
-    .auftrag { margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-    .highlight { background: #d8f0da; border-radius: 5px; padding: 2px 6px; display: inline-block; margin: 2px 0; }
-    button { margin-top: 10px; }
-    label { display: block; margin-top: 10px; }
-    input, select, textarea { padding: 5px; width: 100%; max-width: 400px; margin-top: 4px; }
-    .speisen-container { margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px; }
-    .beilagen-container { margin-top: 10px; }
-    .small { font-size: 0.85em; color: #555; }
-    @media print {
-      button, input, select, textarea { display: none; }
-      body { background: white; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    .overview {
+      display: flex;
+      gap: 20px;
+      margin: 20px;
+    }
+    .overview div {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      flex: 1;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    main {
+      padding: 20px;
+    }
+    section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: 600;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    .row {
+      display: flex;
+      gap: 20px;
+    }
+    .row .column {
+      flex: 1;
+    }
+    button {
+      background-color: #27ae60;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #219150;
+    }
+    .dynamic-block {
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .auftrag-liste {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .auftrag-eintrag {
+      border-bottom: 1px solid #ccc;
+      padding: 10px 0;
+    }
+    .auftrag-eintrag:last-child {
+      border-bottom: none;
     }
   </style>
 </head>
 <body>
-  <h1>Auftrag erfassen (V24)</h1>
-  <div class="block">
-    <form id="auftragForm">
-      <label>Kundenname: <input required id="kunde" /></label>
-      <label>Lieferdatum: <input type="date" id="datum" required></label>
-      <label>Uhrzeit: <input type="time" id="zeit"></label>
-      <label>Lieferort: <input id="ort" /></label>
-      <label>Telefonnummer: <input id="telefon" /></label>
-      <label>Notizen: <textarea id="notizen" rows="2"></textarea></label>
-
-      <h2>Vorspeise</h2>
-      <label>
-        Vorspeise wählen:
-        <select id="vorspeise">
-          <option value="">Keine</option>
-          <option>Currywurst</option>
-          <option>Gulaschsuppe</option>
-          <option>Kartoffelsuppe mit Würstchen</option>
-          <option>Kartoffelsuppe Vegetarisch</option>
-          <option>Lauch Hack Suppe</option>
-          <option>Chilli Con Carne</option>
-          <option>Chilli Sin Carne</option>
-          <option>Broccolicremesuppe</option>
-        </select>
-      </label>
-      <label>Personenanzahl Vorspeise: <input type="number" min="0" id="vorspeisePersonen"></label>
-      <label><input type="checkbox" id="vorspeiseBrot"> Brot dazu?</label>
-
-      <div id="speisenWrapper"></div>
-      <button type="button" onclick="addSpeise()">+ Speise/Beilage hinzufügen</button><br><br>
-      <button type="submit">✔ Auftrag speichern</button>
-    </form>
+  <header>
+    <h1>Partyservice Kleinfeldt – Auftragsverwaltung</h1>
+  </header>
+  <div class="overview">
+    <div id="gesamtauftraege">Gespeicherte Aufträge: 0</div>
+    <div id="wochenauftraege">Diese Woche: 0</div>
+    <div id="heuteauftraege">Heute: 0</div>
   </div>
-
-  <h2>Auftragsübersicht</h2>
-  <div id="liste" class="block"></div>
-
+  <main>
+    <section>
+      <h2>📝 Neuer Kundenauftrag</h2>
+      <label for="kundenname">Kundenname</label>
+<input type="text" id="kundenname">
+<div class="row">
+  <div class="column">
+    <label for="auftragsdatum">Auftragsdatum</label>
+    <input type="date" id="auftragsdatum">
+  </div>
+  <div class="column">
+    <label for="lieferzeit">Lieferuhrzeit</label>
+    <input type="time" id="lieferzeit">
+  </div>
+</div>
+<label for="lieferort">Lieferort</label>
+<input type="text" id="lieferort">
+<label for="anzahlGaeste">Anzahl der Gäste</label>
+<input type="number" id="anzahlGaeste" min="1">
+<h3>Vorspeisen</h3>
+<div id="vorspeisenContainer"></div>
+<button type="button" onclick="addVorspeise()">+ Vorspeise hinzufügen</button>
+<h3>Hauptspeisen & Beilagen</h3>
+<div id="hauptspeisenContainer"></div>
+<button type="button" onclick="addHauptspeise()">+ Hauptspeise hinzufügen</button>
+<h3>Nachspeisen</h3>
+<div id="nachspeisenContainer"></div>
+<button type="button" onclick="addNachspeise()">+ Nachspeise hinzufügen</button>
+<button style="margin-top: 20px;" onclick="auftragSpeichern()">Auftrag speichern</button>
+    </section>
+    <section class="auftrag-liste">
+      <h2>📋 Auftragsübersicht</h2>
+      <label for="filterDatum">Aufträge filtern nach Datum:</label>
+      <input type="date" id="filterDatum" onchange="zeigeAuftraege()">
+      <button onclick="druckeAuswahl()">🖨️ Auswahl drucken</button>
+      <div id="auftragsListe"></div>
+    </section>
+  </main>
   <script>
-    let auftraege = [];
+    const auftragsListe = document.getElementById('auftragsListe');
 
-    const HAUPTSPEISEN = [
-      "Spanferkel", "BBQ Spanferkel", "Honigschinken", "Grillschinken", "Glasierte Pute",
-      "Rinderbraten", "Kräuterbraten", "Gyrosbraten", "Griechischer Rahmbraten", "Spießbraten",
-      "Altdeutscher Bierbraten", "Schweinefilet in Sahnesauce", "Kassler im Blätterteig",
-      "Bayrischer Leberkäse", "Grünkohl", "Wildschweinbraten", "Amerikanische Knabbereien", "Pulled Pork"
-    ];
-
-    const BEILAGEN = [
-      "Kartoffelpüree", "Kartoffelgratin", "Bratkartoffeln", "Röstkartoffeln", "Kartoffelspalten", "Salzkartoffeln", "Reis",
-      "Bunte Gemüseauswahl", "Rotkohl", "geschmortes Kraut",
-      "Weißkrautsalat Natur", "Weißkrautsalat mit Yogurt angemacht", "frischer gemischter Salat",
-      "Eisberg-Melonen Salat", "Griechischer Salat", "Kartoffelsalat", "Speckkartoffelsalat", "Nudelsalat"
-    ];
-
-    function addSpeise() {
-      const div = document.createElement("div");
-      div.className = "speisen-container";
-      div.innerHTML = `
-        <label>Hauptspeise:
-          <select name="speise">
-            ${HAUPTSPEISEN.map(s => `<option>${s}</option>`).join("")}
-          </select>
-        </label>
-        <label>Personen: <input type="number" min="1" name="personen" value="1"></label>
-        <div class="beilagen-container">
-          <label>Beilage:
-            <select name="beilage">
-              ${BEILAGEN.map(b => `<option>${b}</option>`).join("")}
-            </select>
-            <input type="number" min="1" name="beilagePersonen" placeholder="Personen">
-          </label>
-        </div>
-        <button type="button" onclick="addBeilage(this)">+ weitere Beilage</button>
-        <button type="button" onclick="this.parentElement.remove()">🗑️ Speise löschen</button>
-      `;
-      document.getElementById("speisenWrapper").appendChild(div);
+    function auftragSpeichern() {
+      const name = document.getElementById('kundenname').value;
+      const datum = document.getElementById('auftragsdatum').value;
+      const zeit = document.getElementById('lieferzeit').value;
+      const ort = document.getElementById('lieferort').value;
+      const gaeste = document.getElementById('anzahlGaeste').value;
+      if (!name || !datum || !zeit || !ort || !gaeste) {
+        alert("Bitte alle Pflichtfelder ausfüllen.");
+        return;
+      }
+      const neuerAuftrag = { name, datum, zeit, ort, gaeste, id: Date.now() };
+      const daten = JSON.parse(localStorage.getItem("auftraege") || "[]");
+      daten.push(neuerAuftrag);
+      localStorage.setItem("auftraege", JSON.stringify(daten));
+      zeigeAuftraege();
     }
 
-    function addBeilage(btn) {
-      const block = btn.previousElementSibling;
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <label>Beilage:
-          <select name="beilage">
-            ${BEILAGEN.map(b => `<option>${b}</option>`).join("")}
-          </select>
-          <input type="number" min="1" name="beilagePersonen" placeholder="Personen">
-        </label>
-      `;
-      block.parentElement.insertBefore(div, btn);
-    }
-
-    function render() {
-      const liste = document.getElementById("liste");
-      liste.innerHTML = "";
-      auftraege.sort((a, b) => new Date(a.datum + "T" + a.zeit) - new Date(b.datum + "T" + b.zeit));
-      for (const a of auftraege) {
-        const d = new Date(a.datum);
-        const wochentag = d.toLocaleDateString("de-DE", { weekday: 'long' });
-        const el = document.createElement("div");
-        el.className = "auftrag";
-        el.innerHTML = `
-          <strong>${a.kunde}</strong> – ${wochentag}, ${a.datum.split("-").reverse().join(".")} ${a.zeit}<br>
-          Ort: ${a.ort}, Tel: ${a.telefon}<br>
-          ${a.vorspeise ? `Vorspeise: ${a.vorspeise} für ${a.vorspeisePersonen} Pers. (${(a.vorspeisePersonen * 0.5).toFixed(1)}l)` : ""}
-          ${a.vorspeiseBrot ? `+ ${Math.ceil(a.vorspeisePersonen / 6)} Brot(e)` : ""}<br>
-          ${a.speisen.map(s => `
-            <div style="margin-top:8px">
-              🍽️ ${s.speise} für ${s.personen} Pers. (${s.speise.includes("Spanferkel") ? s.personen*650 : 250*s.personen}g Fleisch)<br>
-              Beilagen:<br>
-              ${s.beilagen.map(b => {
-                const menge = b.name.toLowerCase().includes("kraut") ? 150 : 250;
-                return `<span class="highlight">${b.name}: ${b.personen * menge}g</span>`;
-              }).join(" ")}
-            </div>
-          `).join("")}
-          <br>📝 Notiz: ${a.notizen || "-"}
+    function zeigeAuftraege() {
+      const daten = JSON.parse(localStorage.getItem("auftraege") || "[]");
+      const filter = document.getElementById("filterDatum").value;
+      const gefiltert = filter ? daten.filter(a => a.datum === filter) : daten;
+      gefiltert.sort((a, b) => new Date(a.datum + 'T' + a.zeit) - new Date(b.datum + 'T' + b.zeit));
+      auftragsListe.innerHTML = "";
+      gefiltert.forEach((auftrag) => {
+        const div = document.createElement("div");
+        div.className = "auftrag-eintrag";
+        div.innerHTML = `
+          <input type="checkbox" class="druckauswahl" data-id="${auftrag.id}"> 
+          <strong>${auftrag.name}</strong> – ${auftrag.datum} um ${auftrag.zeit}<br>
+          ${auftrag.ort} – ${auftrag.gaeste} Gäste
+          <br><button onclick="auftragLoeschen(${auftrag.id})">🗑️ Löschen</button>
         `;
-        liste.appendChild(el);
-      }
+        auftragsListe.appendChild(div);
+      });
+      document.getElementById('gesamtauftraege').innerText = `Gespeicherte Aufträge: ${daten.length}`;
     }
 
-    document.getElementById("auftragForm").addEventListener("submit", function(e) {
-      e.preventDefault();
-      const speisenDOM = document.querySelectorAll(".speisen-container");
-      const speisen = [];
-      for (const s of speisenDOM) {
-        const speise = s.querySelector("select[name='speise']").value;
-        const personen = parseInt(s.querySelector("input[name='personen']").value);
-        const beilagenDOM = s.querySelectorAll("select[name='beilage']");
-        const beilagePersonen = s.querySelectorAll("input[name='beilagePersonen']");
-        const beilagen = [];
-        beilagenDOM.forEach((b, i) => {
-          beilagen.push({ name: b.value, personen: parseInt(beilagePersonen[i].value) });
-        });
-        speisen.push({ speise, personen, beilagen });
+    function auftragLoeschen(id) {
+      let daten = JSON.parse(localStorage.getItem("auftraege") || "[]");
+      daten = daten.filter(a => a.id !== id);
+      localStorage.setItem("auftraege", JSON.stringify(daten));
+      zeigeAuftraege();
+    }
+
+    function druckeAuswahl() {
+      const checked = Array.from(document.querySelectorAll(".druckauswahl:checked"));
+      if (checked.length === 0) {
+        alert("Bitte mindestens einen Auftrag zur Ausgabe auswählen.");
+        return;
       }
-
-      auftraege.push({
-        kunde: document.getElementById("kunde").value,
-        datum: document.getElementById("datum").value,
-        zeit: document.getElementById("zeit").value,
-        ort: document.getElementById("ort").value,
-        telefon: document.getElementById("telefon").value,
-        notizen: document.getElementById("notizen").value,
-        vorspeise: document.getElementById("vorspeise").value,
-        vorspeisePersonen: parseInt(document.getElementById("vorspeisePersonen").value) || 0,
-        vorspeiseBrot: document.getElementById("vorspeiseBrot").checked,
-        speisen
+      const daten = JSON.parse(localStorage.getItem("auftraege") || "[]");
+      const ids = checked.map(cb => Number(cb.dataset.id));
+      const auszudrucken = daten.filter(a => ids.includes(a.id));
+      let html = '<h1>Ausgewählte Kundenaufträge</h1>';
+      auszudrucken.forEach(a => {
+        html += `<div style='margin-bottom:20px;'><strong>${a.name}</strong><br>${a.datum} – ${a.zeit}<br>${a.ort}<br>${a.gaeste} Gäste</div>`;
       });
+      const win = window.open('', '_blank');
+      win.document.write(`<html><head><title>Druckansicht</title></head><body>${html}</body></html>`);
+      win.document.close();
+      win.print();
+    }
 
-      this.reset();
-      document.getElementById("speisenWrapper").innerHTML = "";
-      render();
-    });
+    function addVorspeise() {
+  const container = document.getElementById('vorspeisenContainer');
+  const block = document.createElement('div');
+  block.className = 'dynamic-block';
+  block.innerHTML = `
+    <label>Vorspeise</label>
+    <select>
+      <option>-- Bitte wählen --</option>
+      <option>Kartoffelsuppe mit Würstchen</option>
+      <option>Kartoffelsuppe Vegetarisch</option>
+      <option>Lauch Hack Suppe</option>
+      <option>Gulaschsuppe</option>
+      <option>Broccolicremesuppe</option>
+      <option>Chilli Con Carne</option>
+      <option>Chilli Sin Carne</option>
+    </select>
+    <label>Personenzahl</label>
+    <input type="number" min="1">
+    <label><input type="checkbox"> Brot dazu?</label>
+    <button type="button" onclick="this.parentElement.remove()">Löschen</button>
+  `;
+  container.appendChild(block);
+}
 
-    window.onload = () => addSpeise();
+function addHauptspeise() {
+  const container = document.getElementById('hauptspeisenContainer');
+  const block = document.createElement('div');
+  block.className = 'dynamic-block';
+  const beilagenId = 'beilagen_' + Date.now();
+  block.innerHTML = `
+    <label>Hauptspeise</label>
+    <select>
+      <option>-- Bitte wählen --</option>
+      <option>Spanferkel mit Beilagen</option>
+      <option>BBQ Schwein mit Beilagen</option>
+      <option>Spanferkel ohne Beilagen</option>
+      <option>BBQ Schwein ohne Beilagen</option>
+      <option>Honigschinken</option>
+      <option>Grillschinken</option>
+      <option>Glasierte Pute</option>
+      <option>Rinderbraten</option>
+      <option>Kräuterbraten</option>
+      <option>Gyrosbraten</option>
+      <option>Griechischer Rahmbraten</option>
+      <option>Spießbraten</option>
+      <option>Altdeutscher Bierbraten</option>
+      <option>Schweinefilet in Sahnesauce</option>
+      <option>Kassler im Blätterteig</option>
+      <option>Bayrischer Leberkäse</option>
+      <option>Grünkohl</option>
+      <option>Wildschweinbraten</option>
+      <option>Amerikanische Knabbereien</option>
+      <option>Pulled Pork</option>
+    </select>
+    <label>Personenzahl</label>
+    <input type="number" min="1">
+    <div id="${beilagenId}" class="beilagen-container"></div>
+    <button type="button" onclick="addBeilage('${beilagenId}')">+ Beilage hinzufügen</button>
+    <button type="button" onclick="this.parentElement.remove()">Hauptspeise löschen</button>
+  `;
+  container.appendChild(block);
+}
+
+function addBeilage(containerId) {
+  const container = document.getElementById(containerId);
+  const block = document.createElement('div');
+  block.className = 'dynamic-block';
+  block.innerHTML = `
+    <label>Beilage</label>
+    <select>
+      <option disabled>-- Kartoffelbeilagen --</option>
+      <option>Kartoffelgratin</option>
+      <option>Röstkartoffeln</option>
+      <option>Kartoffelspalten</option>
+      <option>Salzkartoffeln</option>
+      <option>Bratkartoffeln</option>
+      <option>Kartoffelklöße</option>
+      <option>Reis</option>
+      <option disabled>-- Gemüse --</option>
+      <option>bunte Gemüseauswahl</option>
+      <option>geschmortes Kraut</option>
+      <option>Erbsen & Möhren</option>
+      <option>Rosenkohl</option>
+      <option>Brokkoli</option>
+      <option>Blumenkohl</option>
+      <option disabled>-- Salate --</option>
+      <option>Kartoffelsalat</option>
+      <option>Nudelsalat</option>
+      <option>frischer gemischter Salat</option>
+      <option>Eisberg Melonen Salat</option>
+      <option>Griechischer Salat</option>
+      <option>Krautsalat Natur</option>
+      <option>Krautsalat in Yogurtsoße</option>
+    </select>
+    <label>Personenzahl</label>
+    <input type="number" min="1">
+    <button type="button" onclick="this.parentElement.remove()">Beilage löschen</button>
+  `;
+  container.appendChild(block);
+}
+
+function addNachspeise() {
+  const container = document.getElementById('nachspeisenContainer');
+  const block = document.createElement('div');
+  block.className = 'dynamic-block';
+  block.innerHTML = `
+    <label>Nachspeise</label>
+    <select>
+      <option>-- Bitte wählen --</option>
+      <option>Mousse au Chocolat</option>
+      <option>Rote Grütze mit Vanillesoße</option>
+      <option>Tiramisu</option>
+      <option>Obstsalat</option>
+      <option>Mascarponequark mit Himbeermark</option>
+      <option>Vanillemousse</option>
+    </select>
+    <label>Personenzahl</label>
+    <input type="number" min="1">
+    <button type="button" onclick="this.parentElement.remove()">Löschen</button>
+  `;
+  container.appendChild(block);
+}
+
+window.onload = zeigeAuftraege;
   </script>
 </body>
 </html>
