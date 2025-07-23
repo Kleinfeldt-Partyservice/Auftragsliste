@@ -1,4 +1,852 @@
-<!DOCTYPE html>
+      const wochenAuftraege = auftraegeDaten.filter(a => {
+        const auftragsDatum = new Date(a.datum);
+        return getWeekNumber(a.datum) === aktuelleWoche && auftragsDatum.getFullYear() === aktuellesJahr;
+      }).length;
+      
+      document.getElementById('gesamtauftraege').innerText = `Gespeicherte Aufträge: ${auftraegeDaten.length}`;
+      document.getElementById('wochenauftraege').innerText = `Diese Woche: ${wochenAuftraege}`;
+      document.getElementById('heuteauftraege').innerText = `Heute: ${heuteAuftraege}`;
+    }
+
+    function formatiereSpeisen(auftrag) {
+      let speisenHtml = '<div style="margin-top: 10px; font-size: 0.9em;">';
+      
+      // Vorspeisen
+      if (auftrag.vorspeisen && auftrag.vorspeisen.length > 0) {
+        speisenHtml += '<strong>Vorspeisen:</strong><br>';
+        auftrag.vorspeisen.forEach(vorspeise => {
+          const berechnung = berechneVorspeise(vorspeise.speise, vorspeise.anzahl, vorspeise.brot);
+          const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} ${berechnung.einheit}`;
+          speisenHtml += `• ${vorspeise.speise} (${vorspeise.anzahl} Pers., ${gewichtText})${berechnung.zusatz}<br>`;
+        });
+        speisenHtml += '<br>';
+      }
+      
+      // Hauptspeisen
+      if (auftrag.hauptspeisen && auftrag.hauptspeisen.length > 0) {
+        speisenHtml += '<strong>Hauptspeisen:</strong><br>';
+        auftrag.hauptspeisen.forEach(hauptspeise => {
+          const berechnung = berechneHauptspeise(hauptspeise.speise, hauptspeise.anzahl);
+          let gewichtText = '';
+          if (berechnung.gewicht > 0) {
+            gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} ${berechnung.einheit}`;
+            speisenHtml += `• ${hauptspeise.speise} (${hauptspeise.anzahl} Pers., ${gewichtText})${berechnung.zusatz}<br>`;
+          } else {
+            speisenHtml += `• ${hauptspeise.speise} (${hauptspeise.anzahl} Pers.)${berechnung.zusatz}<br>`;
+          }
+        });
+        speisenHtml += '<br>';
+      }
+      
+      // Beilagen (zusammengefasst)
+      if (auftrag.beilagen && auftrag.beilagen.length > 0) {
+        speisenHtml += '<strong>Beilagen:</strong><br>';
+        auftrag.beilagen.forEach(beilage => {
+          const berechnung = berechneBeilage(beilage.speise, beilage.anzahl);
+          if (berechnung.einheit === 'Pers.') {
+            speisenHtml += `• ${beilage.speise} (${beilage.anzahl} Pers.)<br>`;
+          } else if (berechnung.einheit === 'Tüte' || berechnung.einheit === 'Tüten') {
+            speisenHtml += `• ${beilage.speise} (${beilage.anzahl} Pers., ${berechnung.gewicht} ${berechnung.einheit})<br>`;
+          } else {
+            const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
+            speisenHtml += `• ${beilage.speise} (${beilage.anzahl} Pers., ${gewichtText})<br>`;
+          }
+        });
+        speisenHtml += '<br>';
+      }
+      
+      // Nachspeisen
+      if (auftrag.nachspeisen && auftrag.nachspeisen.length > 0) {
+        speisenHtml += '<strong>Nachspeisen:</strong><br>';
+        auftrag.nachspeisen.forEach(nachspeise => {
+          const berechnung = berechneNachspeise(nachspeise.speise, nachspeise.anzahl);
+          const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
+          speisenHtml += `• ${nachspeise.speise} (${nachspeise.anzahl} Pers., ${gewichtText})<br>`;
+        });
+      }
+      
+      speisenHtml += '</div>';
+      return speisenHtml;
+    }
+
+    function zeigeAuftraege() {
+      const filterTyp = document.getElementById("filterTyp").value;
+      let gefiltert = auftraegeDaten;
+      
+      if (filterTyp === 'datum') {
+        const filterDatum = document.getElementById("filterWert").value;
+        if (filterDatum) {
+          gefiltert = auftraegeDaten.filter(a => a.datum === filterDatum);
+        }
+      } else if (filterTyp === 'woche') {
+        const filterWoche = document.getElementById("filterWoche").value;
+        if (filterWoche) {
+          const [jahr, woche] = filterWoche.split('-').map(Number);
+          const { start, end } = getDateFromWeek(jahr, woche);
+          
+          gefiltert = auftraegeDaten.filter(a => {
+            const auftragsDatum = new Date(a.datum);
+            return auftragsDatum >= start && auftragsDatum <= end;
+          });
+        }
+      }
+      
+      gefiltert.sort((a, b) => new Date(a.datum + 'T' + a.zeit) - new Date(b.datum + 'T' + b.zeit));
+      auftragsListe.innerHTML = "";
+      
+      gefiltert.forEach((auftrag) => {
+        const auftragsDatum = new Date(auftrag.datum);
+        const kw = getWeekNumber(auftrag.datum);
+        const div = document.createElement("div");
+        div.className = "auftrag-eintrag";
+        div.setAttribute('data-auftrag-id', auftrag.id);
+        
+        div.innerHTML = `
+          <div class="normal-view">
+            <input type="checkbox" class="druckauswahl" data-id="${auftrag.id}"> 
+            <strong>${auftrag.name}</strong> – ${auftrag.datum} um ${auftrag.zeit} <small>(KW ${kw})</small><br>
+            ${auftrag.ort} – ${auftrag.gaeste} Gäste
+            ${formatiereSpeisen(auftrag)}
+            <div class="button-group">
+              <button class="btn-edit" onclick="starteBearbeitung(${auftrag.id})">✏️ Bearbeiten</button>
+              <button class="btn-delete" onclick="auftragLoeschen(${auftrag.id})">🗑️ Löschen</button>
+            </div>
+          </div>
+          
+          <div class="edit-form">
+            <h4>Auftrag bearbeiten</h4>
+            <label>Kundenname:</label>
+            <input type="text" class="edit-name" value="${auftrag.name}">
+            
+            <div class="row">
+              <div class="column">
+                <label>Auftragsdatum:</label>
+                <input type="date" class="edit-datum" value="${auftrag.datum}">
+              </div>
+              <div class="column">
+                <label>Lieferuhrzeit:</label>
+                <div class="time-picker" style="display: flex; gap: 10px; align-items: center;">
+                  <select class="edit-zeit-stunden" style="width: 80px;">
+                    <option value="">Std</option>
+                    <option value="06" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '06' ? 'selected' : ''}>06</option>
+                    <option value="07" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '07' ? 'selected' : ''}>07</option>
+                    <option value="08" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '08' ? 'selected' : ''}>08</option>
+                    <option value="09" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '09' ? 'selected' : ''}>09</option>
+                    <option value="10" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '10' ? 'selected' : ''}>10</option>
+                    <option value="11" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '11' ? 'selected' : ''}>11</option>
+                    <option value="12" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '12' ? 'selected' : ''}>12</option>
+                    <option value="13" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '13' ? 'selected' : ''}>13</option>
+                    <option value="14" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '14' ? 'selected' : ''}>14</option>
+                    <option value="15" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '15' ? 'selected' : ''}>15</option>
+                    <option value="16" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '16' ? 'selected' : ''}>16</option>
+                    <option value="17" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '17' ? 'selected' : ''}>17</option>
+                    <option value="18" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '18' ? 'selected' : ''}>18</option>
+                    <option value="19" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '19' ? 'selected' : ''}>19</option>
+                    <option value="20" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '20' ? 'selected' : ''}>20</option>
+                    <option value="21" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '21' ? 'selected' : ''}>21</option>
+                    <option value="22" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '22' ? 'selected' : ''}>22</option>
+                    <option value="23" ${auftrag.zeit && auftrag.zeit.split(':')[0] === '23' ? 'selected' : ''}>23</option>
+                  </select>
+                  <span style="font-weight: bold; font-size: 1.2em;">:</span>
+                  <select class="edit-zeit-minuten" style="width: 80px;">
+                    <option value="">Min</option>
+                    <option value="00" ${auftrag.zeit && auftrag.zeit.split(':')[1] === '00' ? 'selected' : ''}>00</option>
+                    <option value="15" ${auftrag.zeit && auftrag.zeit.split(':')[1] === '15' ? 'selected' : ''}>15</option>
+                    <option value="30" ${auftrag.zeit && auftrag.zeit.split(':')[1] === '30' ? 'selected' : ''}>30</option>
+                    <option value="45" ${auftrag.zeit && auftrag.zeit.split(':')[1] === '45' ? 'selected' : ''}>45</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <label>Lieferort:</label>
+            <input type="text" class="edit-ort" value="${auftrag.ort}">
+            
+            <label>Anzahl der Gäste:</label>
+            <input type="number" class="edit-gaeste" value="${auftrag.gaeste}" min="1">
+            
+            <div class="speisen-edit-container" style="margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa;">
+              <!-- Hier werden die Speisen dynamisch eingefügt -->
+            </div>
+            
+            <div class="button-group">
+              <button class="btn-save" onclick="speichereBearbeitung(${auftrag.id})">💾 Speichern</button>
+              <button class="btn-cancel" onclick="brecheBearbeitungAb(${auftrag.id})">❌ Abbrechen</button>
+            </div>
+          </div>
+        `;
+        auftragsListe.appendChild(div);
+      });
+      
+      updateStatistiken();
+      
+      // Wochenoptionen aktualisieren falls nötig
+      if (filterTyp === 'woche') {
+        updateWochenOptionen();
+      }
+    }
+
+    function starteBearbeitung(id) {
+      const auftragDiv = document.querySelector(`[data-auftrag-id="${id}"]`);
+      const normalView = auftragDiv.querySelector('.normal-view');
+      const editForm = auftragDiv.querySelector('.edit-form');
+      const speisenContainer = editForm.querySelector('.speisen-edit-container');
+      
+      // Aktuellen Auftrag finden
+      const auftrag = auftraegeDaten.find(a => a.id === id);
+      
+      // Speisen-Editor generieren
+      speisenContainer.innerHTML = generiereSpeiseEditor(auftrag);
+      
+      normalView.style.display = 'none';
+      editForm.style.display = 'block';
+      editForm.classList.add('active');
+      auftragDiv.classList.add('edit-mode');
+    }
+
+    function generiereSpeiseEditor(auftrag) {
+      let html = '';
+      
+      // Vorspeisen
+      if (auftrag.vorspeisen && auftrag.vorspeisen.length > 0) {
+        html += '<h4 style="color: #667eea; margin-bottom: 15px;">🍲 Vorspeisen bearbeiten:</h4>';
+        auftrag.vorspeisen.forEach((vorspeise, index) => {
+          html += `
+            <div class="edit-speise-block" style="background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+              <div class="row">
+                <div class="column">
+                  <label>Vorspeise:</label>
+                  <select class="edit-vorspeise-name" data-index="${index}">
+                    <option>-- Bitte wählen --</option>
+                    <option ${vorspeise.speise === 'Kartoffelsuppe mit Würstchen' ? 'selected' : ''}>Kartoffelsuppe mit Würstchen</option>
+                    <option ${vorspeise.speise === 'Kartoffelsuppe Vegetarisch' ? 'selected' : ''}>Kartoffelsuppe Vegetarisch</option>
+                    <option ${vorspeise.speise === 'Lauch Hack Suppe' ? 'selected' : ''}>Lauch Hack Suppe</option>
+                    <option ${vorspeise.speise === 'Gulaschsuppe' ? 'selected' : ''}>Gulaschsuppe</option>
+                    <option ${vorspeise.speise === 'Broccolicremesuppe' ? 'selected' : ''}>Broccolicremesuppe</option>
+                    <option ${vorspeise.speise === 'Chilli Con Carne' ? 'selected' : ''}>Chilli Con Carne</option>
+                    <option ${vorspeise.speise === 'Chilli Sin Carne' ? 'selected' : ''}>Chilli Sin Carne</option>
+                  </select>
+                </div>
+                <div class="column">
+                  <label>Personenzahl:</label>
+                  <input type="number" class="edit-vorspeise-anzahl" data-index="${index}" value="${vorspeise.anzahl}" min="1">
+                </div>
+              </div>
+              <label style="margin-top: 10px;">
+                <input type="checkbox" class="edit-vorspeise-brot" data-index="${index}" ${vorspeise.brot ? 'checked' : ''}> Brot dazu?
+              </label>
+              <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneVorspeiseEdit(${index})">🗑️ Entfernen</button>
+            </div>
+          `;
+        });
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px; margin-bottom: 20px;" onclick="fuegeVorspeiseEdit()">+ Vorspeise hinzufügen</button>';
+      } else {
+        html += '<h4 style="color: #667eea;">🍲 Vorspeisen:</h4>';
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px; margin-bottom: 20px;" onclick="fuegeVorspeiseEdit()">+ Vorspeise hinzufügen</button>';
+      }
+      
+      // Hauptspeisen
+      if (auftrag.hauptspeisen && auftrag.hauptspeisen.length > 0) {
+        html += '<h4 style="color: #667eea; margin-bottom: 15px;">🍖 Hauptspeisen bearbeiten:</h4>';
+        auftrag.hauptspeisen.forEach((hauptspeise, index) => {
+          html += `
+            <div class="edit-speise-block" style="background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+              <div class="row">
+                <div class="column">
+                  <label>Hauptspeise:</label>
+                  <select class="edit-hauptspeise-name" data-index="${index}">
+                    <option>-- Bitte wählen --</option>
+                    <option ${hauptspeise.speise === 'Spanferkel mit Beilagen' ? 'selected' : ''}>Spanferkel mit Beilagen</option>
+                    <option ${hauptspeise.speise === 'BBQ Schwein mit Beilagen' ? 'selected' : ''}>BBQ Schwein mit Beilagen</option>
+                    <option ${hauptspeise.speise === 'Spanferkel ohne Beilagen' ? 'selected' : ''}>Spanferkel ohne Beilagen</option>
+                    <option ${hauptspeise.speise === 'BBQ Schwein ohne Beilagen' ? 'selected' : ''}>BBQ Schwein ohne Beilagen</option>
+                    <option ${hauptspeise.speise === 'Honigschinken' ? 'selected' : ''}>Honigschinken</option>
+                    <option ${hauptspeise.speise === 'Grillschinken' ? 'selected' : ''}>Grillschinken</option>
+                    <option ${hauptspeise.speise === 'Glasierte Pute' ? 'selected' : ''}>Glasierte Pute</option>
+                    <option ${hauptspeise.speise === 'Rinderbraten' ? 'selected' : ''}>Rinderbraten</option>
+                    <option ${hauptspeise.speise === 'Kräuterbraten' ? 'selected' : ''}>Kräuterbraten</option>
+                    <option ${hauptspeise.speise === 'Gyrosbraten' ? 'selected' : ''}>Gyrosbraten</option>
+                    <option ${hauptspeise.speise === 'Griechischer Rahmbraten' ? 'selected' : ''}>Griechischer Rahmbraten</option>
+                    <option ${hauptspeise.speise === 'Spießbraten' ? 'selected' : ''}>Spießbraten</option>
+                    <option ${hauptspeise.speise === 'Altdeutscher Bierbraten' ? 'selected' : ''}>Altdeutscher Bierbraten</option>
+                    <option ${hauptspeise.speise === 'Schweinefilet in Sahnesauce' ? 'selected' : ''}>Schweinefilet in Sahnesauce</option>
+                    <option ${hauptspeise.speise === 'Kassler im Blätterteig' ? 'selected' : ''}>Kassler im Blätterteig</option>
+                    <option ${hauptspeise.speise === 'Bayrischer Leberkäse' ? 'selected' : ''}>Bayrischer Leberkäse</option>
+                    <option ${hauptspeise.speise === 'Grünkohl' ? 'selected' : ''}>Grünkohl</option>
+                    <option ${hauptspeise.speise === 'Wildschweinbraten' ? 'selected' : ''}>Wildschweinbraten</option>
+                    <option ${hauptspeise.speise === 'Amerikanische Knabbereien' ? 'selected' : ''}>Amerikanische Knabbereien</option>
+                    <option ${hauptspeise.speise === 'Pulled Pork' ? 'selected' : ''}>Pulled Pork</option>
+                  </select>
+                </div>
+                <div class="column">
+                  <label>Personenzahl:</label>
+                  <input type="number" class="edit-hauptspeise-anzahl" data-index="${index}" value="${hauptspeise.anzahl}" min="1">
+                </div>
+              </div>
+              <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneHauptspeciseEdit(${index})">🗑️ Entfernen</button>
+            </div>
+          `;
+        });
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px; margin-bottom: 20px;" onclick="fuegeHauptspeiseEdit()">+ Hauptspeise hinzufügen</button>';
+      } else {
+        html += '<h4 style="color: #667eea;">🍖 Hauptspeisen:</h4>';
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px; margin-bottom: 20px;" onclick="fuegeHauptspeiseEdit()">+ Hauptspeise hinzufügen</button>';
+      }
+      
+      // Beilagen
+      if (auftrag.beilagen && auftrag.beilagen.length > 0) {
+        html += '<h4 style="color: #667eea; margin-bottom: 15px;">🥗 Beilagen bearbeiten:</h4>';
+        auftrag.beilagen.forEach((beilage, index) => {
+          html += `
+            <div class="edit-speise-block" style="background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+              <div class="row">
+                <div class="column">
+                  <label>Beilage:</label>
+                  <select class="edit-beilage-name" data-index="${index}">
+                    <option disabled>-- Kartoffelbeilagen --</option>
+                    <option ${beilage.speise === 'Kartoffelgratin' ? 'selected' : ''}>Kartoffelgratin</option>
+                    <option ${beilage.speise === 'Röstkartoffeln' ? 'selected' : ''}>Röstkartoffeln</option>
+                    <option ${beilage.speise === 'Kartoffelspalten' ? 'selected' : ''}>Kartoffelspalten</option>
+                    <option ${beilage.speise === 'Salzkartoffeln' ? 'selected' : ''}>Salzkartoffeln</option>
+                    <option ${beilage.speise === 'Bratkartoffeln' ? 'selected' : ''}>Bratkartoffeln</option>
+                    <option ${beilage.speise === 'Kartoffelklöße' ? 'selected' : ''}>Kartoffelklöße</option>
+                    <option ${beilage.speise === 'Reis' ? 'selected' : ''}>Reis</option>
+                    <option disabled>-- Gemüse --</option>
+                    <option ${beilage.speise === 'bunte Gemüseauswahl' ? 'selected' : ''}>bunte Gemüseauswahl</option>
+                    <option ${beilage.speise === 'geschmortes Kraut' ? 'selected' : ''}>geschmortes Kraut</option>
+                    <option ${beilage.speise === 'Erbsen & Möhren' ? 'selected' : ''}>Erbsen & Möhren</option>
+                    <option ${beilage.speise === 'Rosenkohl' ? 'selected' : ''}>Rosenkohl</option>
+                    <option ${beilage.speise === 'Brokkoli' ? 'selected' : ''}>Brokkoli</option>
+                    <option ${beilage.speise === 'Blumenkohl' ? 'selected' : ''}>Blumenkohl</option>
+                    <option disabled>-- Salate --</option>
+                    <option ${beilage.speise === 'Kartoffelsalat' ? 'selected' : ''}>Kartoffelsalat</option>
+                    <option ${beilage.speise === 'Speckkartoffelsalat' ? 'selected' : ''}>Speckkartoffelsalat</option>
+                    <option ${beilage.speise === 'Nudelsalat' ? 'selected' : ''}>Nudelsalat</option>
+                    <option ${beilage.speise === 'frischer gemischter Salat' ? 'selected' : ''}>frischer gemischter Salat</option>
+                    <option ${beilage.speise === 'Eisberg Melonen Salat' ? 'selected' : ''}>Eisberg Melonen Salat</option>
+                    <option ${beilage.speise === 'Griechischer Salat' ? 'selected' : ''}>Griechischer Salat</option>
+                    <option ${beilage.speise === 'Krautsalat Natur' ? 'selected' : ''}>Krautsalat Natur</option>
+                    <option ${beilage.speise === 'Krautsalat in Yogurtsoße' ? 'selected' : ''}>Krautsalat in Yogurtsoße</option>
+                  </select>
+                </div>
+                <div class="column">
+                  <label>Personenzahl:</label>
+                  <input type="number" class="edit-beilage-anzahl" data-index="${index}" value="${beilage.anzahl}" min="1">
+                </div>
+              </div>
+              <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneBeilageEdit(${index})">🗑️ Entfernen</button>
+            </div>
+          `;
+        });
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px; margin-bottom: 20px;" onclick="fuegeBeilageEdit()">+ Beilage hinzufügen</button>';
+      } else {
+        html += '<h4 style="color: #667eea;">🥗 Beilagen:</h4>';
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px; margin-bottom: 20px;" onclick="fuegeBeilageEdit()">+ Beilage hinzufügen</button>';
+      }
+      
+      // Nachspeisen
+      if (auftrag.nachspeisen && auftrag.nachspeisen.length > 0) {
+        html += '<h4 style="color: #667eea; margin-bottom: 15px;">🍰 Nachspeisen bearbeiten:</h4>';
+        auftrag.nachspeisen.forEach((nachspeise, index) => {
+          html += `
+            <div class="edit-speise-block" style="background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+              <div class="row">
+                <div class="column">
+                  <label>Nachspeise:</label>
+                  <select class="edit-nachspeise-name" data-index="${index}">
+                    <option>-- Bitte wählen --</option>
+                    <option ${nachspeise.speise === 'Mousse au Chocolat' ? 'selected' : ''}>Mousse au Chocolat</option>
+                    <option ${nachspeise.speise === 'Rote Grütze mit Vanillesoße' ? 'selected' : ''}>Rote Grütze mit Vanillesoße</option>
+                    <option ${nachspeise.speise === 'Tiramisu' ? 'selected' : ''}>Tiramisu</option>
+                    <option ${nachspeise.speise === 'Obstsalat' ? 'selected' : ''}>Obstsalat</option>
+                    <option ${nachspeise.speise === 'Mascarponequark mit Himbeermark' ? 'selected' : ''}>Mascarponequark mit Himbeermark</option>
+                    <option ${nachspeise.speise === 'Vanillemousse' ? 'selected' : ''}>Vanillemousse</option>
+                  </select>
+                </div>
+                <div class="column">
+                  <label>Personenzahl:</label>
+                  <input type="number" class="edit-nachspeise-anzahl" data-index="${index}" value="${nachspeise.anzahl}" min="1">
+                </div>
+              </div>
+              <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneNachspeiseEdit(${index})">🗑️ Entfernen</button>
+            </div>
+          `;
+        });
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px;" onclick="fuegeNachspeiseEdit()">+ Nachspeise hinzufügen</button>';
+      } else {
+        html += '<h4 style="color: #667eea;">🍰 Nachspeisen:</h4>';
+        html += '<button type="button" class="btn-edit" style="width: auto; padding: 8px 15px;" onclick="fuegeNachspeiseEdit()">+ Nachspeise hinzufügen</button>';
+      }
+      
+      return html;
+    }
+
+    function brecheBearbeitungAb(id) {
+      const auftragDiv = document.querySelector(`[data-auftrag-id="${id}"]`);
+      const normalView = auftragDiv.querySelector('.normal-view');
+      const editForm = auftragDiv.querySelector('.edit-form');
+      
+      normalView.style.display = 'block';
+      editForm.style.display = 'none';
+      editForm.classList.remove('active');
+      auftragDiv.classList.remove('edit-mode');
+    }
+
+    function speichereBearbeitung(id) {
+      const auftragDiv = document.querySelector(`[data-auftrag-id="${id}"]`);
+      const name = auftragDiv.querySelector('.edit-name').value;
+      const datum = auftragDiv.querySelector('.edit-datum').value;
+      const stunden = auftragDiv.querySelector('.edit-zeit-stunden').value;
+      const minuten = auftragDiv.querySelector('.edit-zeit-minuten').value;
+      const zeit = stunden && minuten ? `${stunden}:${minuten}` : '';
+      const ort = auftragDiv.querySelector('.edit-ort').value;
+      const gaeste = auftragDiv.querySelector('.edit-gaeste').value;
+      
+      if (!name || !datum || !zeit || !ort || !gaeste) {
+        alert("Bitte alle Pflichtfelder ausfüllen.");
+        return;
+      }
+      
+      // Speisen aus dem Edit-Formular sammeln
+      const bearbeiteSpeisen = sammeleSpeiseAusBearbeitung(auftragDiv);
+      
+      const auftragIndex = auftraegeDaten.findIndex(a => a.id === id);
+      if (auftragIndex !== -1) {
+        auftraegeDaten[auftragIndex] = {
+          ...auftraegeDaten[auftragIndex],
+          name,
+          datum,
+          zeit,
+          ort,
+          gaeste: parseInt(gaeste),
+          vorspeisen: bearbeiteSpeisen.vorspeisen,
+          hauptspeisen: bearbeiteSpeisen.hauptspeisen,
+          beilagen: bearbeiteSpeisen.beilagen,
+          nachspeisen: bearbeiteSpeisen.nachspeisen
+        };
+        
+        zeigeAuftraege();
+      }
+    }
+
+    function sammeleSpeiseAusBearbeitung(auftragDiv) {
+      const vorspeisen = [];
+      const hauptspeisen = [];
+      const beilagen = [];
+      const nachspeisen = [];
+      
+      // Vorspeisen sammeln
+      auftragDiv.querySelectorAll('.edit-vorspeise-name').forEach((select, index) => {
+        const speise = select.value;
+        const anzahlInput = auftragDiv.querySelector(`.edit-vorspeise-anzahl[data-index="${index}"]`);
+        const brotCheckbox = auftragDiv.querySelector(`.edit-vorspeise-brot[data-index="${index}"]`);
+        
+        if (speise && speise !== '-- Bitte wählen --' && anzahlInput && parseInt(anzahlInput.value) > 0) {
+          vorspeisen.push({
+            speise,
+            anzahl: parseInt(anzahlInput.value),
+            brot: brotCheckbox ? brotCheckbox.checked : false
+          });
+        }
+      });
+      
+      // Hauptspeisen sammeln
+      auftragDiv.querySelectorAll('.edit-hauptspeise-name').forEach((select, index) => {
+        const speise = select.value;
+        const anzahlInput = auftragDiv.querySelector(`.edit-hauptspeise-anzahl[data-index="${index}"]`);
+        
+        if (speise && speise !== '-- Bitte wählen --' && anzahlInput && parseInt(anzahlInput.value) > 0) {
+          hauptspeisen.push({
+            speise,
+            anzahl: parseInt(anzahlInput.value)
+          });
+        }
+      });
+      
+      // Beilagen sammeln
+      auftragDiv.querySelectorAll('.edit-beilage-name').forEach((select, index) => {
+        const speise = select.value;
+        const anzahlInput = auftragDiv.querySelector(`.edit-beilage-anzahl[data-index="${index}"]`);
+        
+        if (speise && anzahlInput && parseInt(anzahlInput.value) > 0) {
+          beilagen.push({
+            speise,
+            anzahl: parseInt(anzahlInput.value)
+          });
+        }
+      });
+      
+      // Nachspeisen sammeln
+      auftragDiv.querySelectorAll('.edit-nachspeise-name').forEach((select, index) => {
+        const speise = select.value;
+        const anzahlInput = auftragDiv.querySelector(`.edit-nachspeise-anzahl[data-index="${index}"]`);
+        
+        if (speise && speise !== '-- Bitte wählen --' && anzahlInput && parseInt(anzahlInput.value) > 0) {
+          nachspeisen.push({
+            speise,
+            anzahl: parseInt(anzahlInput.value)
+          });
+        }
+      });
+      
+      // Beilagen zusammenfassen
+      const beilagenZusammengefasst = fasseBeilagenZusammen(beilagen);
+      
+      return { vorspeisen, hauptspeisen, beilagen: beilagenZusammengefasst, nachspeisen };
+    }
+
+    // Funktionen zum Hinzufügen von Speisen im Bearbeitungsmodus
+    function fuegeVorspeiseEdit() {
+      const container = document.querySelector('.edit-form.active .speisen-edit-container');
+      const vorspeiseSection = container.querySelector('h4:first-child').nextElementSibling;
+      const nextIndex = container.querySelectorAll('.edit-vorspeise-name').length;
+      
+      const newBlock = document.createElement('div');
+      newBlock.className = 'edit-speise-block';
+      newBlock.style.cssText = 'background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;';
+      newBlock.innerHTML = `
+        <div class="row">
+          <div class="column">
+            <label>Vorspeise:</label>
+            <select class="edit-vorspeise-name" data-index="${nextIndex}">
+              <option>-- Bitte wählen --</option>
+              <option>Kartoffelsuppe mit Würstchen</option>
+              <option>Kartoffelsuppe Vegetarisch</option>
+              <option>Lauch Hack Suppe</option>
+              <option>Gulaschsuppe</option>
+              <option>Broccolicremesuppe</option>
+              <option>Chilli Con Carne</option>
+              <option>Chilli Sin Carne</option>
+            </select>
+          </div>
+          <div class="column">
+            <label>Personenzahl:</label>
+            <input type="number" class="edit-vorspeise-anzahl" data-index="${nextIndex}" value="1" min="1">
+          </div>
+        </div>
+        <label style="margin-top: 10px;">
+          <input type="checkbox" class="edit-vorspeise-brot" data-index="${nextIndex}"> Brot dazu?
+        </label>
+        <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneVorspeiseEdit(${nextIndex})">🗑️ Entfernen</button>
+      `;
+      
+      vorspeiseSection.parentNode.insertBefore(newBlock, vorspeiseSection);
+    }
+
+    function fuegeHauptspeiseEdit() {
+      const container = document.querySelector('.edit-form.active .speisen-edit-container');
+      const hauptspeiseButton = Array.from(container.querySelectorAll('button')).find(btn => btn.textContent.includes('+ Hauptspeise'));
+      const nextIndex = container.querySelectorAll('.edit-hauptspeise-name').length;
+      
+      const newBlock = document.createElement('div');
+      newBlock.className = 'edit-speise-block';
+      newBlock.style.cssText = 'background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;';
+      newBlock.innerHTML = `
+        <div class="row">
+          <div class="column">
+            <label>Hauptspeise:</label>
+            <select class="edit-hauptspeise-name" data-index="${nextIndex}">
+              <option>-- Bitte wählen --</option>
+              <option>Spanferkel mit Beilagen</option>
+              <option>BBQ Schwein mit Beilagen</option>
+              <option>Spanferkel ohne Beilagen</option>
+              <option>BBQ Schwein ohne Beilagen</option>
+              <option>Honigschinken</option>
+              <option>Grillschinken</option>
+              <option>Glasierte Pute</option>
+              <option>Rinderbraten</option>
+              <option>Kräuterbraten</option>
+              <option>Gyrosbraten</option>
+              <option>Griechischer Rahmbraten</option>
+              <option>Spießbraten</option>
+              <option>Altdeutscher Bierbraten</option>
+              <option>Schweinefilet in Sahnesauce</option>
+              <option>Kassler im Blätterteig</option>
+              <option>Bayrischer Leberkäse</option>
+              <option>Grünkohl</option>
+              <option>Wildschweinbraten</option>
+              <option>Amerikanische Knabbereien</option>
+              <option>Pulled Pork</option>
+            </select>
+          </div>
+          <div class="column">
+            <label>Personenzahl:</label>
+            <input type="number" class="edit-hauptspeise-anzahl" data-index="${nextIndex}" value="1" min="1">
+          </div>
+        </div>
+        <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneHauptspeciseEdit(${nextIndex})">🗑️ Entfernen</button>
+      `;
+      
+      hauptspeiseButton.parentNode.insertBefore(newBlock, hauptspeiseButton);
+    }
+
+    function fuegeBeilageEdit() {
+      const container = document.querySelector('.edit-form.active .speisen-edit-container');
+      const beilageButton = Array.from(container.querySelectorAll('button')).find(btn => btn.textContent.includes('+ Beilage'));
+      const nextIndex = container.querySelectorAll('.edit-beilage-name').length;
+      
+      const newBlock = document.createElement('div');
+      newBlock.className = 'edit-speise-block';
+      newBlock.style.cssText = 'background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;';
+      newBlock.innerHTML = `
+        <div class="row">
+          <div class="column">
+            <label>Beilage:</label>
+            <select class="edit-beilage-name" data-index="${nextIndex}">
+              <option disabled>-- Kartoffelbeilagen --</option>
+              <option>Kartoffelgratin</option>
+              <option>Röstkartoffeln</option>
+              <option>Kartoffelspalten</option>
+              <option>Salzkartoffeln</option>
+              <option>Bratkartoffeln</option>
+              <option>Kartoffelklöße</option>
+              <option>Reis</option>
+              <option disabled>-- Gemüse --</option>
+              <option>bunte Gemüseauswahl</option>
+              <option>geschmortes Kraut</option>
+              <option>Erbsen & Möhren</option>
+              <option>Rosenkohl</option>
+              <option>Brokkoli</option>
+              <option>Blumenkohl</option>
+              <option disabled>-- Salate --</option>
+              <option>Kartoffelsalat</option>
+              <option>Speckkartoffelsalat</option>
+              <option>Nudelsalat</option>
+              <option>frischer gemischter Salat</option>
+              <option>Eisberg Melonen Salat</option>
+              <option>Griechischer Salat</option>
+              <option>Krautsalat Natur</option>
+              <option>Krautsalat in Yogurtsoße</option>
+            </select>
+          </div>
+          <div class="column">
+            <label>Personenzahl:</label>
+            <input type="number" class="edit-beilage-anzahl" data-index="${nextIndex}" value="1" min="1">
+          </div>
+        </div>
+        <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneBeilageEdit(${nextIndex})">🗑️ Entfernen</button>
+      `;
+      
+      beilageButton.parentNode.insertBefore(newBlock, beilageButton);
+    }
+
+    function fuegeNachspeiseEdit() {
+      const container = document.querySelector('.edit-form.active .speisen-edit-container');
+      const nachspeiseButton = Array.from(container.querySelectorAll('button')).find(btn => btn.textContent.includes('+ Nachspeise'));
+      const nextIndex = container.querySelectorAll('.edit-nachspeise-name').length;
+      
+      const newBlock = document.createElement('div');
+      newBlock.className = 'edit-speise-block';
+      newBlock.style.cssText = 'background: #f8f9ff; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 10px;';
+      newBlock.innerHTML = `
+        <div class="row">
+          <div class="column">
+            <label>Nachspeise:</label>
+            <select class="edit-nachspeise-name" data-index="${nextIndex}">
+              <option>-- Bitte wählen --</option>
+              <option>Mousse au Chocolat</option>
+              <option>Rote Grütze mit Vanillesoße</option>
+              <option>Tiramisu</option>
+              <option>Obstsalat</option>
+              <option>Mascarponequark mit Himbeermark</option>
+              <option>Vanillemousse</option>
+            </select>
+          </div>
+          <div class="column">
+            <label>Personenzahl:</label>
+            <input type="number" class="edit-nachspeise-anzahl" data-index="${nextIndex}" value="1" min="1">
+          </div>
+        </div>
+        <button type="button" class="btn-delete" style="width: auto; padding: 5px 10px; margin-top: 10px;" onclick="entferneNachspeiseEdit(${nextIndex})">🗑️ Entfernen</button>
+      `;
+      
+      nachspeiseButton.parentNode.insertBefore(newBlock, nachspeiseButton);
+    }
+
+    // Funktionen zum Entfernen von Speisen im Bearbeitungsmodus
+    function entferneVorspeiseEdit(index) {
+      const editBlock = document.querySelector(`.edit-vorspeise-name[data-index="${index}"]`).closest('.edit-speise-block');
+      editBlock.remove();
+    }
+
+    function entferneHauptspeciseEdit(index) {
+      const editBlock = document.querySelector(`.edit-hauptspeise-name[data-index="${index}"]`).closest('.edit-speise-block');
+      editBlock.remove();
+    }
+
+    function entferneBeilageEdit(index) {
+      const editBlock = document.querySelector(`.edit-beilage-name[data-index="${index}"]`).closest('.edit-speise-block');
+      editBlock.remove();
+    }
+
+    function entferneNachspeiseEdit(index) {
+      const editBlock = document.querySelector(`.edit-nachspeise-name[data-index="${index}"]`).closest('.edit-speise-block');
+      editBlock.remove();
+    }
+
+    function auftragLoeschen(id) {
+      if (confirm('Sind Sie sicher, dass Sie diesen Auftrag löschen möchten?')) {
+        auftraegeDaten = auftraegeDaten.filter(a => a.id !== id);
+        zeigeAuftraege();
+      }
+    }
+
+    function druckeAuswahl() {
+      const checked = Array.from(document.querySelectorAll(".druckauswahl:checked"));
+      if (checked.length === 0) {
+        alert("Bitte mindestens einen Auftrag zur Ausgabe auswählen.");
+        return;
+      }
+      const ids = checked.map(cb => Number(cb.dataset.id));
+      const auszudrucken = auftraegeDaten.filter(a => ids.includes(a.id));
+      let html = '<h1>Ausgewählte Kundenaufträge</h1>';
+      auszudrucken.forEach(a => {
+        html += `<div style='margin-bottom:30px; border-bottom: 1px solid #ccc; padding-bottom: 20px;'>
+          <h3>${a.name}</h3>
+          <p><strong>Datum:</strong> ${a.datum} – ${a.zeit}<br>
+          <strong>Ort:</strong> ${a.ort}<br>
+          <strong>Gäste:</strong> ${a.gaeste}</p>
+          ${formatiereSpeisen(a)}
+        </div>`;
+      });
+      const win = window.open('', '_blank');
+      win.document.write(`<html><head><title>Druckansicht</title><style>body{font-family:Arial,sans-serif;margin:20px;}</style></head><body>${html}</body></html>`);
+      win.document.close();
+      win.print();
+    }
+
+    function addVorspeise() {
+      const container = document.getElementById('vorspeisenContainer');
+      const block = document.createElement('div');
+      block.className = 'dynamic-block';
+      block.innerHTML = `
+        <label>Vorspeise</label>
+        <select>
+          <option>-- Bitte wählen --</option>
+          <option>Kartoffelsuppe mit Würstchen</option>
+          <option>Kartoffelsuppe Vegetarisch</option>
+          <option>Lauch Hack Suppe</option>
+          <option>Gulaschsuppe</option>
+          <option>Broccolicremesuppe</option>
+          <option>Chilli Con Carne</option>
+          <option>Chilli Sin Carne</option>
+        </select>
+        <label>Personenzahl</label>
+        <input type="number" min="1">
+        <label><input type="checkbox"> Brot dazu?</label>
+        <button type="button" onclick="this.parentElement.remove()">Löschen</button>
+      `;
+      container.appendChild(block);
+    }
+
+    function addHauptspeise() {
+      const container = document.getElementById('hauptspeisenContainer');
+      const block = document.createElement('div');
+      block.className = 'dynamic-block';
+      const beilagenId = 'beilagen_' + Date.now();
+      block.innerHTML = `
+        <label>Hauptspeise</label>
+        <select>
+          <option>-- Bitte wählen --</option>
+          <option>Spanferkel mit Beilagen</option>
+          <option>BBQ Schwein mit Beilagen</option>
+          <option>Spanferkel ohne Beilagen</option>
+          <option>BBQ Schwein ohne Beilagen</option>
+          <option>Honigschinken</option>
+          <option>Grillschinken</option>
+          <option>Glasierte Pute</option>
+          <option>Rinderbraten</option>
+          <option>Kräuterbraten</option>
+          <option>Gyrosbraten</option>
+          <option>Griechischer Rahmbraten</option>
+          <option>Spießbraten</option>
+          <option>Altdeutscher Bierbraten</option>
+          <option>Schweinefilet in Sahnesauce</option>
+          <option>Kassler im Blätterteig</option>
+          <option>Bayrischer Leberkäse</option>
+          <option>Grünkohl</option>
+          <option>Wildschweinbraten</option>
+          <option>Amerikanische Knabbereien</option>
+          <option>Pulled Pork</option>
+        </select>
+        <label>Personenzahl</label>
+        <input type="number" min="1">
+        <div id="${beilagenId}" class="beilagen-container"></div>
+        <button type="button" onclick="addBeilage('${beilagenId}')">+ Beilage hinzufügen</button>
+        <button type="button" onclick="this.parentElement.remove()">Hauptspeise löschen</button>
+      `;
+      container.appendChild(block);
+    }
+
+    function addBeilage(containerId) {
+      const container = document.getElementById(containerId);
+      const block = document.createElement('div');
+      block.className = 'dynamic-block';
+      block.innerHTML = `
+        <label>Beilage</label>
+        <select>
+          <option disabled>-- Kartoffelbeilagen --</option>
+          <option>Kartoffelgratin</option>
+          <option>Röstkartoffeln</option>
+          <option>Kartoffelspalten</option>
+          <option>Salzkartoffeln</option>
+          <option>Bratkartoffeln</option>
+          <option>Kartoffelklöße</option>
+          <option>Reis</option>
+          <option disabled>-- Gemüse --</option>
+          <option>bunte Gemüseauswahl</option>
+          <option>geschmortes Kraut</option>
+          <option>Erbsen & Möhren</option>
+          <option>Rosenkohl</option>
+          <option>Brokkoli</option>
+          <option>Blumenkohl</option>
+          <option disabled>-- Salate --</option>
+          <option>Kartoffelsalat</option>
+          <option>Speckkartoffelsalat</option>
+          <option>Nudelsalat</option>
+          <option>frischer gemischter Salat</option>
+          <option>Eisberg Melonen Salat</option>
+          <option>Griechischer Salat</option>
+          <option>Krautsalat Natur</option>
+          <option>Krautsalat in Yogurtsoße</option>
+        </select>
+        <label>Personenzahl</label>
+        <input type="number" min="1">
+        <button type="button" onclick="this.parentElement.remove()">Beilage löschen</button>
+      `;
+      container.appendChild(block);
+    }
+
+    function addNachspeise() {
+      const container = document.getElementById('nachspeisenContainer');
+      const block = document.createElement('div');
+      block.className = 'dynamic-block';
+      block.innerHTML = `
+        <label>Nachspeise</label>
+        <select>
+          <option>-- Bitte wählen --</option>
+          <option>Mousse au Chocolat</option>
+          <option>Rote Grütze mit Vanillesoße</option>
+          <option>Tiramisu</option>
+          <option>Obstsalat</option>
+          <option>Mascarponequark mit Himbeermark</option>
+          <option>Vanillemousse</option>
+        </select>
+        <label>Personenzahl</label>
+        <input type="number" min="1">
+        <button type="button" onclick="this.parentElement.remove()">Löschen</button>
+      `;
+      container.appendChild(block);
+    }
+
+    // Initialisierung beim Laden der Seite
+    window.onload = function() {
+      zeigeAuftraege();
+      updateStatistiken();
+    };
+  </script>
+</body>
+</html><!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
@@ -292,7 +1140,37 @@
   </div>
   <div class="column">
     <label for="lieferzeit">Lieferuhrzeit</label>
-    <input type="time" id="lieferzeit">
+    <div class="time-picker" style="display: flex; gap: 10px; align-items: center;">
+      <select id="lieferzeit-stunden" style="width: 80px;">
+        <option value="">Std</option>
+        <option value="06">06</option>
+        <option value="07">07</option>
+        <option value="08">08</option>
+        <option value="09">09</option>
+        <option value="10">10</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+        <option value="13">13</option>
+        <option value="14">14</option>
+        <option value="15">15</option>
+        <option value="16">16</option>
+        <option value="17">17</option>
+        <option value="18">18</option>
+        <option value="19">19</option>
+        <option value="20">20</option>
+        <option value="21">21</option>
+        <option value="22">22</option>
+        <option value="23">23</option>
+      </select>
+      <span style="font-weight: bold; font-size: 1.2em;">:</span>
+      <select id="lieferzeit-minuten" style="width: 80px;">
+        <option value="">Min</option>
+        <option value="00">00</option>
+        <option value="15">15</option>
+        <option value="30">30</option>
+        <option value="45">45</option>
+      </select>
+    </div>
   </div>
 </div>
 <label for="lieferort">Lieferort</label>
@@ -412,7 +1290,7 @@
       
       // Brotberechnung für Suppen
       if (mitBrot) {
-        const brote = Math.ceil((anzahl / 6) >= 0.4 ? anzahl / 6 : 0);
+        const brote = Math.ceil(anzahl / 6);
         ergebnis.zusatz = ` + ${brote} Brot${brote > 1 ? 'e' : ''}`;
       }
       
@@ -464,7 +1342,7 @@
       const nurPersonenSalate = ['frischer gemischter Salat', 'Griechischer Salat', 'Eisberg Melonen Salat'];
       
       if (nurPersonenSalate.includes(speise)) {
-        ergebnis.gewicht = 0;
+        ergebnis.gewicht = anzahl;
         ergebnis.einheit = 'Pers.';
         ergebnis.zusatz = '';
         return ergebnis;
@@ -482,8 +1360,8 @@
           break;
         default:
           if (salatSorten.includes(speise)) {
-            // Standardberechnung für Salate (wird bei Spanferkel/BBQ speziell behandelt)
-            ergebnis.gewicht = anzahl * 250; // Fallback
+            // Standardberechnung für Salate
+            ergebnis.gewicht = anzahl * 250;
           } else {
             // Kartoffelbeilagen und Standardgemüse: 250g pro Person
             ergebnis.gewicht = anzahl * 250;
@@ -594,7 +1472,9 @@
     function auftragSpeichern() {
       const name = document.getElementById('kundenname').value;
       const datum = document.getElementById('auftragsdatum').value;
-      const zeit = document.getElementById('lieferzeit').value;
+      const stunden = document.getElementById('lieferzeit-stunden').value;
+      const minuten = document.getElementById('lieferzeit-minuten').value;
+      const zeit = stunden && minuten ? `${stunden}:${minuten}` : '';
       const ort = document.getElementById('lieferort').value;
       const gaeste = document.getElementById('anzahlGaeste').value;
       
@@ -626,7 +1506,8 @@
       // Clear form
       document.getElementById('kundenname').value = '';
       document.getElementById('auftragsdatum').value = '';
-      document.getElementById('lieferzeit').value = '';
+      document.getElementById('lieferzeit-stunden').value = '';
+      document.getElementById('lieferzeit-minuten').value = '';
       document.getElementById('lieferort').value = '';
       document.getElementById('anzahlGaeste').value = '';
       document.getElementById('vorspeisenContainer').innerHTML = '';
@@ -641,373 +1522,4 @@
       
       const heuteAuftraege = auftraegeDaten.filter(a => a.datum === heute).length;
       const wochenAuftraege = auftraegeDaten.filter(a => {
-        const auftragsDatum = new Date(a.datum);
-        return getWeekNumber(a.datum) === aktuelleWoche && auftragsDatum.getFullYear() === aktuellesJahr;
-      }).length;
-      
-      document.getElementById('gesamtauftraege').innerText = `Gespeicherte Aufträge: ${auftraegeDaten.length}`;
-      document.getElementById('wochenauftraege').innerText = `Diese Woche: ${wochenAuftraege}`;
-      document.getElementById('heuteauftraege').innerText = `Heute: ${heuteAuftraege}`;
-    }
-
-    function formatiereSpeisen(auftrag) {
-      let speisenHtml = '<div style="margin-top: 10px; font-size: 0.9em;">';
-      
-      // Vorspeisen
-      if (auftrag.vorspeisen && auftrag.vorspeisen.length > 0) {
-        speisenHtml += '<strong>Vorspeisen:</strong><br>';
-        auftrag.vorspeisen.forEach(vorspeise => {
-          const berechnung = berechneVorspeise(vorspeise.speise, vorspeise.anzahl, vorspeise.brot);
-          const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} ${berechnung.einheit}`;
-          speisenHtml += `• ${vorspeise.speise} (${vorspeise.anzahl} Pers., ${gewichtText})${berechnung.zusatz}<br>`;
-        });
-        speisenHtml += '<br>';
-      }
-      
-      // Hauptspeisen
-      if (auftrag.hauptspeisen && auftrag.hauptspeisen.length > 0) {
-        speisenHtml += '<strong>Hauptspeisen:</strong><br>';
-        auftrag.hauptspeisen.forEach(hauptspeise => {
-          const berechnung = berechneHauptspeise(hauptspeise.speise, hauptspeise.anzahl);
-          let gewichtText = '';
-          if (berechnung.gewicht > 0) {
-            gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} ${berechnung.einheit}`;
-            speisenHtml += `• ${hauptspeise.speise} (${hauptspeise.anzahl} Pers., ${gewichtText})${berechnung.zusatz}<br>`;
-          } else {
-            speisenHtml += `• ${hauptspeise.speise} (${hauptspeise.anzahl} Pers.)${berechnung.zusatz}<br>`;
-          }
-        });
-        speisenHtml += '<br>';
-      }
-      
-      // Beilagen (zusammengefasst)
-      if (auftrag.beilagen && auftrag.beilagen.length > 0) {
-        speisenHtml += '<strong>Beilagen:</strong><br>';
-        auftrag.beilagen.forEach(beilage => {
-          const berechnung = berechneBeilage(beilage.speise, beilage.anzahl);
-          if (berechnung.einheit === 'Pers.') {
-            speisenHtml += `• ${beilage.speise} (${beilage.anzahl} Pers.)<br>`;
-          } else if (berechnung.einheit === 'Tüte' || berechnung.einheit === 'Tüten') {
-            speisenHtml += `• ${beilage.speise} (${beilage.anzahl} Pers., ${berechnung.gewicht} ${berechnung.einheit})<br>`;
-          } else {
-            const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
-            speisenHtml += `• ${beilage.speise} (${beilage.anzahl} Pers., ${gewichtText})<br>`;
-          }
-        });
-        speisenHtml += '<br>';
-      }
-      
-      // Nachspeisen
-      if (auftrag.nachspeisen && auftrag.nachspeisen.length > 0) {
-        speisenHtml += '<strong>Nachspeisen:</strong><br>';
-        auftrag.nachspeisen.forEach(nachspeise => {
-          const berechnung = berechneNachspeise(nachspeise.speise, nachspeise.anzahl);
-          const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
-          speisenHtml += `• ${nachspeise.speise} (${nachspeise.anzahl} Pers., ${gewichtText})<br>`;
-        });
-      }
-      
-      speisenHtml += '</div>';
-      return speisenHtml;
-    }
-
-    function zeigeAuftraege() {
-      const filterTyp = document.getElementById("filterTyp").value;
-      let gefiltert = auftraegeDaten;
-      
-      if (filterTyp === 'datum') {
-        const filterDatum = document.getElementById("filterWert").value;
-        if (filterDatum) {
-          gefiltert = auftraegeDaten.filter(a => a.datum === filterDatum);
-        }
-      } else if (filterTyp === 'woche') {
-        const filterWoche = document.getElementById("filterWoche").value;
-        if (filterWoche) {
-          const [jahr, woche] = filterWoche.split('-').map(Number);
-          const { start, end } = getDateFromWeek(jahr, woche);
-          
-          gefiltert = auftraegeDaten.filter(a => {
-            const auftragsDatum = new Date(a.datum);
-            return auftragsDatum >= start && auftragsDatum <= end;
-          });
-        }
-      }
-      
-      gefiltert.sort((a, b) => new Date(a.datum + 'T' + a.zeit) - new Date(b.datum + 'T' + b.zeit));
-      auftragsListe.innerHTML = "";
-      
-      gefiltert.forEach((auftrag) => {
-        const auftragsDatum = new Date(auftrag.datum);
-        const kw = getWeekNumber(auftrag.datum);
-        const div = document.createElement("div");
-        div.className = "auftrag-eintrag";
-        div.setAttribute('data-auftrag-id', auftrag.id);
-        
-        div.innerHTML = `
-          <div class="normal-view">
-            <input type="checkbox" class="druckauswahl" data-id="${auftrag.id}"> 
-            <strong>${auftrag.name}</strong> – ${auftrag.datum} um ${auftrag.zeit} <small>(KW ${kw})</small><br>
-            ${auftrag.ort} – ${auftrag.gaeste} Gäste
-            ${formatiereSpeisen(auftrag)}
-            <div class="button-group">
-              <button class="btn-edit" onclick="starteBearbeitung(${auftrag.id})">✏️ Bearbeiten</button>
-              <button class="btn-delete" onclick="auftragLoeschen(${auftrag.id})">🗑️ Löschen</button>
-            </div>
-          </div>
-          
-          <div class="edit-form">
-            <h4>Auftrag bearbeiten</h4>
-            <label>Kundenname:</label>
-            <input type="text" class="edit-name" value="${auftrag.name}">
-            
-            <div class="row">
-              <div class="column">
-                <label>Auftragsdatum:</label>
-                <input type="date" class="edit-datum" value="${auftrag.datum}">
-              </div>
-              <div class="column">
-                <label>Lieferuhrzeit:</label>
-                <input type="time" class="edit-zeit" value="${auftrag.zeit}">
-              </div>
-            </div>
-            
-            <label>Lieferort:</label>
-            <input type="text" class="edit-ort" value="${auftrag.ort}">
-            
-            <label>Anzahl der Gäste:</label>
-            <input type="number" class="edit-gaeste" value="${auftrag.gaeste}" min="1">
-            
-            <div class="speisen-edit-container" style="margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa;">
-              <!-- Hier werden die Speisen dynamisch eingefügt -->
-            </div>
-            
-            <div class="button-group">
-              <button class="btn-save" onclick="speichereBearbeitung(${auftrag.id})">💾 Speichern</button>
-              <button class="btn-cancel" onclick="brecheBearbeitungAb(${auftrag.id})">❌ Abbrechen</button>
-            </div>
-          </div>
-        `;
-        auftragsListe.appendChild(div);
-      });
-      
-      updateStatistiken();
-      
-      // Wochenoptionen aktualisieren falls nötig
-      if (filterTyp === 'woche') {
-        updateWochenOptionen();
-      }
-    }
-
-    function starteBearbeitung(id) {
-      const auftragDiv = document.querySelector(`[data-auftrag-id="${id}"]`);
-      const normalView = auftragDiv.querySelector('.normal-view');
-      const editForm = auftragDiv.querySelector('.edit-form');
-      
-      normalView.style.display = 'none';
-      editForm.style.display = 'block';
-      editForm.classList.add('active');
-      auftragDiv.classList.add('edit-mode');
-    }
-
-    function brecheBearbeitungAb(id) {
-      const auftragDiv = document.querySelector(`[data-auftrag-id="${id}"]`);
-      const normalView = auftragDiv.querySelector('.normal-view');
-      const editForm = auftragDiv.querySelector('.edit-form');
-      
-      normalView.style.display = 'block';
-      editForm.style.display = 'none';
-      editForm.classList.remove('active');
-      auftragDiv.classList.remove('edit-mode');
-    }
-
-    function speichereBearbeitung(id) {
-      const auftragDiv = document.querySelector(`[data-auftrag-id="${id}"]`);
-      const name = auftragDiv.querySelector('.edit-name').value;
-      const datum = auftragDiv.querySelector('.edit-datum').value;
-      const zeit = auftragDiv.querySelector('.edit-zeit').value;
-      const ort = auftragDiv.querySelector('.edit-ort').value;
-      const gaeste = auftragDiv.querySelector('.edit-gaeste').value;
-      
-      if (!name || !datum || !zeit || !ort || !gaeste) {
-        alert("Bitte alle Pflichtfelder ausfüllen.");
-        return;
-      }
-      
-      const auftragIndex = auftraegeDaten.findIndex(a => a.id === id);
-      if (auftragIndex !== -1) {
-        auftraegeDaten[auftragIndex] = {
-          ...auftraegeDaten[auftragIndex],
-          name,
-          datum,
-          zeit,
-          ort,
-          gaeste: parseInt(gaeste)
-        };
-        
-        zeigeAuftraege();
-      }
-    }
-
-    function auftragLoeschen(id) {
-      if (confirm('Sind Sie sicher, dass Sie diesen Auftrag löschen möchten?')) {
-        auftraegeDaten = auftraegeDaten.filter(a => a.id !== id);
-        zeigeAuftraege();
-      }
-    }
-
-    function druckeAuswahl() {
-      const checked = Array.from(document.querySelectorAll(".druckauswahl:checked"));
-      if (checked.length === 0) {
-        alert("Bitte mindestens einen Auftrag zur Ausgabe auswählen.");
-        return;
-      }
-      const ids = checked.map(cb => Number(cb.dataset.id));
-      const auszudrucken = auftraegeDaten.filter(a => ids.includes(a.id));
-      let html = '<h1>Ausgewählte Kundenaufträge</h1>';
-      auszudrucken.forEach(a => {
-        html += `<div style='margin-bottom:30px; border-bottom: 1px solid #ccc; padding-bottom: 20px;'>
-          <h3>${a.name}</h3>
-          <p><strong>Datum:</strong> ${a.datum} – ${a.zeit}<br>
-          <strong>Ort:</strong> ${a.ort}<br>
-          <strong>Gäste:</strong> ${a.gaeste}</p>
-          ${formatiereSpeisen(a)}
-        </div>`;
-      });
-      const win = window.open('', '_blank');
-      win.document.write(`<html><head><title>Druckansicht</title><style>body{font-family:Arial,sans-serif;margin:20px;}</style></head><body>${html}</body></html>`);
-      win.document.close();
-      win.print();
-    }
-
-    function addVorspeise() {
-      const container = document.getElementById('vorspeisenContainer');
-      const block = document.createElement('div');
-      block.className = 'dynamic-block';
-      block.innerHTML = `
-        <label>Vorspeise</label>
-        <select>
-          <option>-- Bitte wählen --</option>
-          <option>Kartoffelsuppe mit Würstchen</option>
-          <option>Kartoffelsuppe Vegetarisch</option>
-          <option>Lauch Hack Suppe</option>
-          <option>Gulaschsuppe</option>
-          <option>Broccolicremesuppe</option>
-          <option>Chilli Con Carne</option>
-          <option>Chilli Sin Carne</option>
-        </select>
-        <label>Personenzahl</label>
-        <input type="number" min="1">
-        <label><input type="checkbox"> Brot dazu?</label>
-        <button type="button" onclick="this.parentElement.remove()">Löschen</button>
-      `;
-      container.appendChild(block);
-    }
-
-    function addHauptspeise() {
-      const container = document.getElementById('hauptspeisenContainer');
-      const block = document.createElement('div');
-      block.className = 'dynamic-block';
-      const beilagenId = 'beilagen_' + Date.now();
-      block.innerHTML = `
-        <label>Hauptspeise</label>
-        <select>
-          <option>-- Bitte wählen --</option>
-          <option>Spanferkel mit Beilagen</option>
-          <option>BBQ Schwein mit Beilagen</option>
-          <option>Spanferkel ohne Beilagen</option>
-          <option>BBQ Schwein ohne Beilagen</option>
-          <option>Honigschinken</option>
-          <option>Grillschinken</option>
-          <option>Glasierte Pute</option>
-          <option>Rinderbraten</option>
-          <option>Kräuterbraten</option>
-          <option>Gyrosbraten</option>
-          <option>Griechischer Rahmbraten</option>
-          <option>Spießbraten</option>
-          <option>Altdeutscher Bierbraten</option>
-          <option>Schweinefilet in Sahnesauce</option>
-          <option>Kassler im Blätterteig</option>
-          <option>Bayrischer Leberkäse</option>
-          <option>Grünkohl</option>
-          <option>Wildschweinbraten</option>
-          <option>Amerikanische Knabbereien</option>
-          <option>Pulled Pork</option>
-        </select>
-        <label>Personenzahl</label>
-        <input type="number" min="1">
-        <div id="${beilagenId}" class="beilagen-container"></div>
-        <button type="button" onclick="addBeilage('${beilagenId}')">+ Beilage hinzufügen</button>
-        <button type="button" onclick="this.parentElement.remove()">Hauptspeise löschen</button>
-      `;
-      container.appendChild(block);
-    }
-
-    function addBeilage(containerId) {
-      const container = document.getElementById(containerId);
-      const block = document.createElement('div');
-      block.className = 'dynamic-block';
-      block.innerHTML = `
-        <label>Beilage</label>
-        <select>
-          <option disabled>-- Kartoffelbeilagen --</option>
-          <option>Kartoffelgratin</option>
-          <option>Röstkartoffeln</option>
-          <option>Kartoffelspalten</option>
-          <option>Salzkartoffeln</option>
-          <option>Bratkartoffeln</option>
-          <option>Kartoffelklöße</option>
-          <option>Reis</option>
-          <option disabled>-- Gemüse --</option>
-          <option>bunte Gemüseauswahl</option>
-          <option>geschmortes Kraut</option>
-          <option>Erbsen & Möhren</option>
-          <option>Rosenkohl</option>
-          <option>Brokkoli</option>
-          <option>Blumenkohl</option>
-          <option disabled>-- Salate --</option>
-          <option>Kartoffelsalat</option>
-          <option>Speckkartoffelsalat</option>
-          <option>Nudelsalat</option>
-          <option>frischer gemischter Salat</option>
-          <option>Eisberg Melonen Salat</option>
-          <option>Griechischer Salat</option>
-          <option>Krautsalat Natur</option>
-          <option>Krautsalat in Yogurtsoße</option>
-        </select>
-        <label>Personenzahl</label>
-        <input type="number" min="1">
-        <button type="button" onclick="this.parentElement.remove()">Beilage löschen</button>
-      `;
-      container.appendChild(block);
-    }
-
-    function addNachspeise() {
-      const container = document.getElementById('nachspeisenContainer');
-      const block = document.createElement('div');
-      block.className = 'dynamic-block';
-      block.innerHTML = `
-        <label>Nachspeise</label>
-        <select>
-          <option>-- Bitte wählen --</option>
-          <option>Mousse au Chocolat</option>
-          <option>Rote Grütze mit Vanillesoße</option>
-          <option>Tiramisu</option>
-          <option>Obstsalat</option>
-          <option>Mascarponequark mit Himbeermark</option>
-          <option>Vanillemousse</option>
-        </select>
-        <label>Personenzahl</label>
-        <input type="number" min="1">
-        <button type="button" onclick="this.parentElement.remove()">Löschen</button>
-      `;
-      container.appendChild(block);
-    }
-
-    // Initialisierung beim Laden der Seite
-    window.onload = function() {
-      zeigeAuftraege();
-      updateStatistiken();
-    };
-  </script>
-</body>
-</html>
+        const auftrag
