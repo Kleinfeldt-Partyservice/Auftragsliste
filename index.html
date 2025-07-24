@@ -381,6 +381,64 @@
                 alert('Alle Aufträge wurden gelöscht!');
             }
         }
+
+        // Erweiterte Berechnungsfunktionen
+        function berechneVorspeise(speise, anzahl, mitBrot) {
+            const liter = anzahl * 0.5; // 0,5 Liter pro Person für alle Suppen
+            let ergebnis = { 
+                menge: liter, 
+                einheit: liter >= 1 ? 'L' : 'ml',
+                anzeige: liter >= 1 ? `${liter.toFixed(1)} L` : `${(liter * 1000)} ml`,
+                zusatz: '' 
+            };
+            
+            if (mitBrot) {
+                const brote = Math.ceil(anzahl / 6);
+                ergebnis.zusatz = ` + ${brote} Brot${brote > 1 ? 'e' : ''}`;
+            }
+            
+            return ergebnis;
+        }
+
+        function berechneHauptspeise(speise, anzahl) {
+            let ergebnis = { gewicht: 0, einheit: 'g', zusatz: '' };
+            
+            switch(speise) {
+                case 'Spanferkel mit Beilagen':
+                case 'Spanferkel ohne Beilagen':
+                case 'BBQ Schwein mit Beilagen':
+                case 'BBQ Schwein ohne Beilagen':
+                    ergebnis.gewicht = anzahl * 650; // 650g für Spanferkel/BBQ
+                    if (speise.includes('mit Beilagen')) {
+                        const brote = Math.ceil(anzahl / 10);
+                        ergebnis.zusatz = ` + ${brote} Brot${brote > 1 ? 'e' : ''}`;
+                    }
+                    break;
+                    
+                case 'Pulled Pork':
+                    ergebnis.gewicht = anzahl * 300; // 300g für Pulled Pork
+                    const brotePulled = Math.ceil(anzahl / 10);
+                    ergebnis.zusatz = ` + ${brotePulled} Brot${brotePulled > 1 ? 'e' : ''}`;
+                    break;
+                    
+                case 'Amerikanische Knabbereien':
+                    // Spezielle Berechnung für Amerikanische Knabbereien
+                    const rippen = Math.ceil((anzahl / 5) * 3); // 3 Rippen pro 5 Personen
+                    const wings = anzahl * 4; // 4 Wings pro Person
+                    const finger = anzahl * 4; // 4 Chicken Finger pro Person
+                    const broteAmerikan = Math.ceil(anzahl / 10);
+                    
+                    ergebnis.gewicht = 0; // Kein Gewicht, da aufgeschlüsselt
+                    ergebnis.einheit = '';
+                    ergebnis.zusatz = `${rippen} Rippen, ${wings} Wings, ${finger} Chicken Finger + ${broteAmerikan} Brot${broteAmerikan > 1 ? 'e' : ''}`;
+                    return ergebnis;
+                    
+                default:
+                    ergebnis.gewicht = anzahl * 250; // Standard 250g pro Person
+            }
+            
+            return ergebnis;
+        }
         
         function speichereAuftrag() {
             const kunde = document.getElementById('kunde').value;
@@ -786,10 +844,10 @@
                 if (auftrag.vorspeisen && auftrag.vorspeisen.length > 0) {
                     speisenHtml += '<br><strong>Vorspeisen:</strong><br>';
                     auftrag.vorspeisen.forEach(v => {
-                        const gewicht = v.anzahl * 250; // 250g pro Person
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
+                        const liter = v.anzahl * 0.5; // 0,5 Liter pro Person
+                        const literText = liter >= 1 ? `${liter.toFixed(1)} L` : `${(liter * 1000)} ml`;
                         const brotText = v.brot ? ` + ${Math.ceil(v.anzahl / 6)} Brot${Math.ceil(v.anzahl / 6) > 1 ? 'e' : ''}` : '';
-                        speisenHtml += `• ${v.speise} (${v.anzahl} Pers., ${gewichtText})${brotText}<br>`;
+                        speisenHtml += `• ${v.speise} (${v.anzahl} Pers., ${literText})${brotText}<br>`;
                     });
                 }
                 
@@ -797,15 +855,15 @@
                 if (auftrag.hauptspeisen && auftrag.hauptspeisen.length > 0) {
                     speisenHtml += '<br><strong>Hauptspeisen:</strong><br>';
                     auftrag.hauptspeisen.forEach(h => {
-                        let gewicht = h.anzahl * 250; // Standard 250g
-                        if (h.speise.includes('Spanferkel') || h.speise.includes('BBQ Schwein')) {
-                            gewicht = h.anzahl * 650; // 650g für Spanferkel/BBQ
-                        } else if (h.speise === 'Pulled Pork') {
-                            gewicht = h.anzahl * 300; // 300g für Pulled Pork
-                        }
+                        const berechnung = berechneHauptspeise(h.speise, h.anzahl);
                         
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        speisenHtml += `• ${h.speise} (${h.anzahl} Pers., ${gewichtText})<br>`;
+                        if (berechnung.gewicht > 0) {
+                            const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
+                            speisenHtml += `• ${h.speise} (${h.anzahl} Pers., ${gewichtText})${berechnung.zusatz}<br>`;
+                        } else {
+                            // Für Amerikanische Knabbereien (kein Gewicht, nur Aufschlüsselung)
+                            speisenHtml += `• ${h.speise} (${h.anzahl} Pers.)${berechnung.zusatz}<br>`;
+                        }
                     });
                 }
                 
@@ -1153,10 +1211,10 @@
                 if (auftrag.vorspeisen && auftrag.vorspeisen.length > 0) {
                     html += '<h4>Vorspeisen:</h4><ul>';
                     auftrag.vorspeisen.forEach(v => {
-                        const gewicht = v.anzahl * 250;
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
+                        const liter = v.anzahl * 0.5; // 0,5 Liter pro Person
+                        const literText = liter >= 1 ? `${liter.toFixed(1)} L` : `${(liter * 1000)} ml`;
                         const brotText = v.brot ? ` + ${Math.ceil(v.anzahl / 6)} Brot${Math.ceil(v.anzahl / 6) > 1 ? 'e' : ''}` : '';
-                        html += `<li>${v.speise} (${v.anzahl} Pers., ${gewichtText})${brotText}</li>`;
+                        html += `<li>${v.speise} (${v.anzahl} Pers., ${literText})${brotText}</li>`;
                     });
                     html += '</ul>';
                 }
@@ -1164,14 +1222,14 @@
                 if (auftrag.hauptspeisen && auftrag.hauptspeisen.length > 0) {
                     html += '<h4>Hauptspeisen:</h4><ul>';
                     auftrag.hauptspeisen.forEach(h => {
-                        let gewicht = h.anzahl * 250;
-                        if (h.speise.includes('Spanferkel') || h.speise.includes('BBQ Schwein')) {
-                            gewicht = h.anzahl * 650;
-                        } else if (h.speise === 'Pulled Pork') {
-                            gewicht = h.anzahl * 300;
+                        const berechnung = berechneHauptspeise(h.speise, h.anzahl);
+                        
+                        if (berechnung.gewicht > 0) {
+                            const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
+                            html += `<li>${h.speise} (${h.anzahl} Pers., ${gewichtText})${berechnung.zusatz}</li>`;
+                        } else {
+                            html += `<li>${h.speise} (${h.anzahl} Pers.)${berechnung.zusatz}</li>`;
                         }
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        html += `<li>${h.speise} (${h.anzahl} Pers., ${gewichtText})</li>`;
                     });
                     html += '</ul>';
                 }
