@@ -509,16 +509,22 @@
             
             // Nachspeisen sammeln
             document.querySelectorAll('#nachspeisen-container .speise-block').forEach((block, index) => {
-                const select = block.querySelector('select');
-                const anzahl = block.querySelector('input[type="number"]');
+                const kategorieSelect = block.querySelector('select');
+                const speisenDiv = block.querySelector('[id$="_speisen"]');
                 
-                console.log(`Nachspeise ${index}:`, select?.value, anzahl?.value);
-                
-                if (select && anzahl && select.value !== '-- Bitte wählen --' && parseInt(anzahl.value) > 0) {
-                    nachspeisen.push({
-                        speise: select.value,
-                        anzahl: parseInt(anzahl.value)
-                    });
+                if (kategorieSelect && speisenDiv && kategorieSelect.value) {
+                    const speisenSelect = speisenDiv.querySelector('.nachspeise-auswahl');
+                    const anzahlInput = speisenDiv.querySelector('input[type="number"]');
+                    
+                    console.log(`Nachspeise ${index}:`, kategorieSelect.value, speisenSelect?.value, anzahlInput?.value);
+                    
+                    if (speisenSelect && anzahlInput && speisenSelect.value !== '-- Bitte wählen --' && parseInt(anzahlInput.value) > 0) {
+                        nachspeisen.push({
+                            kategorie: kategorieSelect.value,
+                            speise: speisenSelect.value,
+                            anzahl: parseInt(anzahlInput.value)
+                        });
+                    }
                 }
             });
             
@@ -634,22 +640,108 @@
             const container = document.getElementById('nachspeisen-container');
             const block = document.createElement('div');
             block.className = 'speise-block';
+            const nachspeiseId = 'nachspeise_' + Date.now();
             block.innerHTML = `
-                <label>Nachspeise:</label>
-                <select>
-                    <option>-- Bitte wählen --</option>
-                    <option>Mousse au Chocolat</option>
-                    <option>Rote Grütze mit Vanillesoße</option>
-                    <option>Tiramisu</option>
-                    <option>Obstsalat</option>
-                    <option>Mascarponequark mit Himbeermark</option>
-                    <option>Vanillemousse</option>
+                <label>Nachspeisen-Kategorie:</label>
+                <select onchange="updateNachspeisenOptionen('${nachspeiseId}')">
+                    <option value="">-- Kategorie wählen --</option>
+                    <option value="N1">N1 - Große Schale (Standard-Portionen)</option>
+                    <option value="N2">N2 - Kleine Portionsschälchen</option>
+                    <option value="N3">N3 - Gourmet Nachspeisen</option>
+                    <option value="Backshop">🧁 Backshop - Kuchen, Donuts & Muffins</option>
                 </select>
-                <label>Personenzahl:</label>
-                <input type="number" min="1" placeholder="Anzahl Personen">
+                <div id="${nachspeiseId}_speisen" style="margin-top: 10px; display: none;">
+                    <label>Nachspeise:</label>
+                    <select class="nachspeise-auswahl">
+                        <option>-- Erst Kategorie wählen --</option>
+                    </select>
+                    <label class="mengen-label">Personenzahl:</label>
+                    <input type="number" min="1" placeholder="Anzahl Personen">
+                </div>
                 <button type="button" onclick="this.parentElement.remove()">🗑️ Entfernen</button>
             `;
             container.appendChild(block);
+        }
+
+        function updateNachspeisenOptionen(nachspeiseId) {
+            const kategorie = event.target.value;
+            const speisenDiv = document.getElementById(nachspeiseId + '_speisen');
+            const speisenSelect = speisenDiv.querySelector('.nachspeise-auswahl');
+            const mengenLabel = speisenDiv.querySelector('.mengen-label');
+            const mengenInput = speisenDiv.querySelector('input[type="number"]');
+            
+            if (!kategorie) {
+                speisenDiv.style.display = 'none';
+                return;
+            }
+            
+            speisenDiv.style.display = 'block';
+            speisenSelect.innerHTML = '<option>-- Bitte wählen --</option>';
+            
+            // Labels und Placeholder je nach Kategorie anpassen
+            if (kategorie === 'Backshop') {
+                mengenLabel.textContent = 'Menge:';
+                mengenInput.placeholder = 'Anzahl (Bleche/Stück)';
+            } else {
+                mengenLabel.textContent = 'Personenzahl:';
+                mengenInput.placeholder = 'Anzahl Personen';
+            }
+            
+            // Alle 6 Standard-Nachspeisen für N1 und N2
+            let optionen = [];
+            
+            if (kategorie === 'N1' || kategorie === 'N2') {
+                optionen = [
+                    'Mousse au Chocolat',
+                    'Rote Grütze mit Vanillesoße',
+                    'Tiramisu',
+                    'Obstsalat',
+                    'Mascarponequark mit Himbeermark',
+                    'Vanillemousse'
+                ];
+            } else if (kategorie === 'N3') {
+                optionen = [
+                    'Bayrische Creme mit Tellerbiskuit und Erdbeere',
+                    'Karamell mit Schokosoße',
+                    'Frischkäsecreme mit Aprikose',
+                    'Schwarzwälder Kirsch',
+                    'Joghurtcreme mit zweierlei von der Himbeere'
+                ];
+            } else if (kategorie === 'Backshop') {
+                // Backshop hat Unterkategorien
+                speisenSelect.innerHTML = `
+                    <option value="">-- Backware wählen --</option>
+                    <optgroup label="🍰 Blechkuchen (15 Stücke/Blech)">
+                        <option value="Blechkuchen - Zitronenkuchen">Zitronenkuchen</option>
+                        <option value="Blechkuchen - Quark-Mandarine">Quark-Mandarine</option>
+                        <option value="Blechkuchen - Quark-Kirsche">Quark-Kirsche</option>
+                        <option value="Blechkuchen - Apfelkuchen mit Zimt">Apfelkuchen mit Zimt</option>
+                        <option value="Blechkuchen - Butterkuchen mit Mandeln">Butterkuchen mit Mandeln</option>
+                        <option value="Blechkuchen - Schokokuchen">Schokokuchen</option>
+                    </optgroup>
+                    <optgroup label="🍩 Donuts (einzeln)">
+                        <option value="Donut - Käsekuchen">Käsekuchen</option>
+                        <option value="Donut - Vanille">Vanille</option>
+                        <option value="Donut - Schoko">Schoko</option>
+                        <option value="Donut - Kaugummi">Kaugummi</option>
+                        <option value="Donut - Pinky Crunch">Pinky Crunch</option>
+                    </optgroup>
+                    <optgroup label="🧁 Muffins (einzeln)">
+                        <option value="Muffin - Blaubeere">Blaubeere</option>
+                        <option value="Muffin - Apfel">Apfel</option>
+                        <option value="Muffin - Marmor">Marmor</option>
+                        <option value="Muffin - Schoko">Schoko</option>
+                    </optgroup>
+                `;
+                return;
+            }
+            
+            optionen.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                speisenSelect.appendChild(optionElement);
+            });
         }
         
         function zeigeAuftraege() {
@@ -731,9 +823,40 @@
                 if (auftrag.nachspeisen && auftrag.nachspeisen.length > 0) {
                     speisenHtml += '<br><strong>Nachspeisen:</strong><br>';
                     auftrag.nachspeisen.forEach(n => {
-                        const gewicht = n.anzahl * 120; // 120g pro Person für Nachspeisen
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        speisenHtml += `• ${n.speise} (${n.anzahl} Pers., ${gewichtText})<br>`;
+                        let kategorieText = '';
+                        let mengenText = '';
+                        
+                        if (n.kategorie === 'N1') {
+                            kategorieText = '[N1 - Große Schale] ';
+                            const gewicht = n.anzahl * 120;
+                            mengenText = `(${n.anzahl} Pers., ${gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`})`;
+                        } else if (n.kategorie === 'N2') {
+                            kategorieText = '[N2 - Kleine Schälchen] ';
+                            const gewicht = n.anzahl * 120;
+                            mengenText = `(${n.anzahl} Pers., ${gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`})`;
+                        } else if (n.kategorie === 'N3') {
+                            kategorieText = '[N3 - Gourmet] ';
+                            const gewicht = n.anzahl * 120;
+                            mengenText = `(${n.anzahl} Pers., ${gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`})`;
+                        } else if (n.kategorie === 'Backshop') {
+                            kategorieText = '[🧁 Backshop] ';
+                            if (n.speise && n.speise.startsWith('Blechkuchen')) {
+                                const stuecke = n.anzahl * 15; // 15 Stücke pro Blech
+                                mengenText = `(${n.anzahl} Blech${n.anzahl > 1 ? 'e' : ''} = ${stuecke} Stücke)`;
+                            } else {
+                                mengenText = `(${n.anzahl} Stück)`;
+                            }
+                        } else if (n.kategorie) {
+                            kategorieText = `[${n.kategorie}] `;
+                            const gewicht = n.anzahl * 120;
+                            mengenText = `(${n.anzahl} Pers., ${gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`})`;
+                        } else {
+                            // Fallback für alte Daten ohne Kategorie
+                            const gewicht = n.anzahl * 120;
+                            mengenText = `(${n.anzahl} Pers., ${gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`})`;
+                        }
+                        
+                        speisenHtml += `• ${kategorieText}${n.speise} ${mengenText}<br>`;
                     });
                 }
                 
@@ -823,8 +946,42 @@
                 auftrag.nachspeisen.forEach(nachspeise => {
                     addNachspeise();
                     const letzterBlock = document.querySelector('#nachspeisen-container .speise-block:last-child');
-                    letzterBlock.querySelector('select').value = nachspeise.speise;
-                    letzterBlock.querySelector('input[type="number"]').value = nachspeise.anzahl;
+                    
+                    // Kategorie setzen
+                    const kategorieSelect = letzterBlock.querySelector('select');
+                    if (nachspeise.kategorie) {
+                        kategorieSelect.value = nachspeise.kategorie;
+                        
+                        // Optionen laden
+                        const nachspeiseId = letzterBlock.querySelector('[id$="_speisen"]').id.replace('_speisen', '');
+                        updateNachspeisenOptionen(nachspeiseId);
+                        
+                        // Speise und Anzahl setzen
+                        setTimeout(() => {
+                            const speisenSelect = letzterBlock.querySelector('.nachspeise-auswahl');
+                            const anzahlInput = letzterBlock.querySelector('input[type="number"]');
+                            
+                            if (speisenSelect && anzahlInput) {
+                                speisenSelect.value = nachspeise.speise;
+                                anzahlInput.value = nachspeise.anzahl;
+                            }
+                        }, 100);
+                    } else {
+                        // Fallback für alte Daten ohne Kategorie
+                        kategorieSelect.value = 'N1'; // Standard auf N1 setzen
+                        const nachspeiseId = letzterBlock.querySelector('[id$="_speisen"]').id.replace('_speisen', '');
+                        updateNachspeisenOptionen(nachspeiseId);
+                        
+                        setTimeout(() => {
+                            const speisenSelect = letzterBlock.querySelector('.nachspeise-auswahl');
+                            const anzahlInput = letzterBlock.querySelector('input[type="number"]');
+                            
+                            if (speisenSelect && anzahlInput) {
+                                speisenSelect.value = nachspeise.speise;
+                                anzahlInput.value = nachspeise.anzahl;
+                            }
+                        }, 100);
+                    }
                 });
             }
             
@@ -1034,7 +1191,19 @@
                     auftrag.nachspeisen.forEach(n => {
                         const gewicht = n.anzahl * 120;
                         const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        html += `<li>${n.speise} (${n.anzahl} Pers., ${gewichtText})</li>`;
+                        
+                        let kategorieText = '';
+                        if (n.kategorie === 'N1') {
+                            kategorieText = '[N1 - Große Schale] ';
+                        } else if (n.kategorie === 'N2') {
+                            kategorieText = '[N2 - Kleine Schälchen] ';
+                        } else if (n.kategorie === 'N3') {
+                            kategorieText = '[N3 - Gourmet] ';
+                        } else if (n.kategorie) {
+                            kategorieText = `[${n.kategorie}] `;
+                        }
+                        
+                        html += `<li>${kategorieText}${n.speise} (${n.anzahl} Pers., ${gewichtText})</li>`;
                     });
                     html += '</ul>';
                 }
