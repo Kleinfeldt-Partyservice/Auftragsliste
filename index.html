@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Partyservice Kleinfeldt - Auftragsverwaltung</title>
+    <title>Partyservice Kleinfeldt - Auftragserfassung</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -60,7 +60,7 @@
             font-weight: bold;
         }
         
-        input, select, button {
+        input, select, button, textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
@@ -107,12 +107,32 @@
         }
         
         .auftrag {
-            border-bottom: 1px solid #eee;
-            padding: 15px 0;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            break-inside: avoid;
         }
         
-        .auftrag:last-child {
-            border-bottom: none;
+        .auftrag:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .auftraege-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .auftraege-grid {
+                grid-template-columns: 1fr;
+            }
         }
         
         .speise-block {
@@ -139,12 +159,49 @@
             margin-left: 20px;
             margin-top: 10px;
         }
+        
+        .data-management {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .data-management h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        
+        .data-management button {
+            width: auto;
+            padding: 8px 15px;
+            margin-right: 10px;
+        }
+        
+        .data-management .export-btn {
+            background: #28a745;
+        }
+        
+        .data-management .import-btn {
+            background: #007bff;
+        }
+        
+        .data-management .delete-btn {
+            background: #dc3545;
+        }
+        
+        .data-management p {
+            margin: 10px 0 0 0;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🍽️ Partyservice Kleinfeldt – Auftragsverwaltung</h1>
+            <h1>🍽️ Partyservice Kleinfeldt – Auftragserfassung</h1>
             <p>Krähenstraße 29, 23552 Lübeck | 📞 0451-75230</p>
         </div>
         
@@ -166,6 +223,16 @@
             <div class="form-group">
                 <label for="kunde">Kundenname:</label>
                 <input type="text" id="kunde" placeholder="Name des Kunden">
+            </div>
+            
+            <div class="form-group">
+                <label for="telefon">Telefonnummer:</label>
+                <input type="tel" id="telefon" placeholder="Telefonnummer des Kunden">
+            </div>
+            
+            <div class="form-group">
+                <label for="notizen">Notizen:</label>
+                <textarea id="notizen" placeholder="Individuelle Notizen zum Auftrag" rows="3" style="resize: vertical; font-family: Arial, sans-serif;"></textarea>
             </div>
             
             <div class="row">
@@ -252,20 +319,18 @@
             
             <button onclick="druckeAuswahl()" style="margin-bottom: 20px;">🖨️ Auswahl drucken</button>
             
-            <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
-                <h4 style="margin: 0 0 10px 0; color: #495057;">💾 Datenverwaltung:</h4>
-                <button onclick="exportiereBackup()" style="width: auto; padding: 8px 15px; margin-right: 10px; background: #28a745;">
+            <div class="data-management">
+                <h4>💾 Datenverwaltung:</h4>
+                <button onclick="exportiereBackup()" class="export-btn">
                     📤 Backup exportieren
                 </button>
-                <button onclick="importiereBackup()" style="width: auto; padding: 8px 15px; margin-right: 10px; background: #007bff;">
+                <button onclick="importiereBackup()" class="import-btn">
                     📥 Backup importieren
                 </button>
-                <button onclick="loescheAlleDaten()" style="width: auto; padding: 8px 15px; background: #dc3545;">
+                <button onclick="loescheAlleDaten()" class="delete-btn">
                     🗑️ Alle Daten löschen
                 </button>
-                <p style="margin: 10px 0 0 0; font-size: 0.9em; color: #6c757d;">
-                    💡 Tipp: Exportieren Sie regelmäßig Backups Ihrer Aufträge!
-                </p>
+                <p>💡 Tipp: Exportieren Sie regelmäßig Backups Ihrer Aufträge!</p>
             </div>
             
             <div id="liste">
@@ -276,113 +341,280 @@
 
     <script>
         let auftraege = [];
-        const STORAGE_KEY = 'partyservice_auftraege';
         
-        // Beim Laden der Seite: Daten aus localStorage laden
-        function ladeDatenAusStorage() {
-            try {
-                const gespeicherteDaten = localStorage.getItem(STORAGE_KEY);
-                if (gespeicherteDaten) {
-                    auftraege = JSON.parse(gespeicherteDaten);
-                    console.log(`${auftraege.length} Aufträge aus localStorage geladen`);
-                }
-            } catch (error) {
-                console.error('Fehler beim Laden der Daten:', error);
-                auftraege = [];
+        // Vorspeisen hinzufügen
+        function addVorspeise() {
+            const container = document.getElementById('vorspeisen-container');
+            const block = document.createElement('div');
+            block.className = 'speise-block';
+            block.innerHTML = `
+                <label>Vorspeise:</label>
+                <select>
+                    <option>-- Bitte wählen --</option>
+                    <option>Kartoffelsuppe mit Würstchen</option>
+                    <option>Kartoffelsuppe Vegetarisch</option>
+                    <option>Lauch Hack Suppe</option>
+                    <option>Gulaschsuppe</option>
+                    <option>Broccolicremesuppe</option>
+                    <option>Chilli Con Carne</option>
+                    <option>Chilli Sin Carne</option>
+                </select>
+                <label>Personenzahl:</label>
+                <input type="number" min="1" placeholder="Anzahl Personen">
+                <label><input type="checkbox"> Brot dazu?</label>
+                <button type="button" onclick="this.parentElement.remove()">🗑️ Entfernen</button>
+            `;
+            container.appendChild(block);
+        }
+        
+        // Backshop-Notizen ein-/ausblenden
+        function toggleBackshopNotizen(nachspeiseId, selectedValue) {
+            const speisenDiv = document.getElementById(nachspeiseId + '_speisen');
+            const notizenDiv = speisenDiv.querySelector('.backshop-notizen');
+            
+            // Notizfeld nur für Bagel und Canapés anzeigen
+            if (selectedValue === 'Bagel - belegt' || selectedValue === 'Canapés') {
+                notizenDiv.style.display = 'block';
+            } else {
+                notizenDiv.style.display = 'none';
             }
         }
         
-        // Daten in localStorage speichern
-        function speichereDatenInStorage() {
-            try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(auftraege));
-                console.log(`${auftraege.length} Aufträge in localStorage gespeichert`);
-            } catch (error) {
-                console.error('Fehler beim Speichern der Daten:', error);
-                alert('Warnung: Daten konnten nicht gespeichert werden. Browser-Speicher möglicherweise voll.');
+        // Individuelle Eingabe für Hauptspeisen togglen
+        function toggleIndividuelleEingabe(selectElement) {
+            const block = selectElement.closest('.speise-block');
+            const individuellDiv = block.querySelector('.individuelle-eingabe');
+            
+            if (selectElement.value === 'individuell') {
+                individuellDiv.style.display = 'block';
+            } else {
+                individuellDiv.style.display = 'none';
             }
         }
         
-        // Backup-Export als JSON-Datei
-        function exportiereBackup() {
-            const dateiName = `Partyservice_Backup_${new Date().toISOString().split('T')[0]}.json`;
-            const datenString = JSON.stringify(auftraege, null, 2);
-            const blob = new Blob([datenString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = dateiName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            alert(`Backup erfolgreich exportiert: ${dateiName}`);
+        // Hauptspeisen hinzufügen
+        function addHauptspeise() {
+            const container = document.getElementById('hauptspeisen-container');
+            const block = document.createElement('div');
+            block.className = 'speise-block';
+            const beilagenId = 'beilagen_' + Date.now();
+            block.innerHTML = `
+                <label>Hauptspeise:</label>
+                <select onchange="toggleIndividuelleEingabe(this)">
+                    <option>-- Bitte wählen --</option>
+                    <option>Spanferkel mit Beilagen</option>
+                    <option>BBQ Schwein mit Beilagen</option>
+                    <option>Spanferkel ohne Beilagen</option>
+                    <option>BBQ Schwein ohne Beilagen</option>
+                    <option>Honigschinken</option>
+                    <option>Grillschinken</option>
+                    <option>Glasierte Pute</option>
+                    <option>Rinderbraten</option>
+                    <option>Rinderrouladen</option>
+                    <option>Kräuterbraten</option>
+                    <option>Gyrosbraten</option>
+                    <option>Griechischer Rahmbraten</option>
+                    <option>Spießbraten</option>
+                    <option>Altdeutscher Bierbraten</option>
+                    <option>Schweinefilet in Sahnesauce</option>
+                    <option>Kassler im Blätterteig</option>
+                    <option>Bayrischer Leberkäse</option>
+                    <option>Grünkohl</option>
+                    <option>Wildschweinbraten</option>
+                    <option>Vegetarische Gemüseschnitzel</option>
+                    <option>Amerikanische Knabbereien</option>
+                    <option>Pulled Pork</option>
+                    <option value="individuell">🎯 Individuelle Speise (Sonderwunsch)</option>
+                </select>
+                <div class="individuelle-eingabe" style="display: none; margin-top: 10px;">
+                    <label>Individuelle Speise:</label>
+                    <input type="text" placeholder="Beschreibung der individuellen Speise" class="individuelle-speise">
+                </div>
+                <label>Personenzahl:</label>
+                <input type="number" min="1" placeholder="Anzahl Personen">
+                <div class="beilagen-container" id="${beilagenId}"></div>
+                <button type="button" onclick="addBeilage('${beilagenId}')">+ Beilage hinzufügen</button>
+                <button type="button" onclick="this.parentElement.remove()">🗑️ Hauptspeise entfernen</button>
+            `;
+            container.appendChild(block);
         }
         
-        // Backup-Import aus JSON-Datei
-        function importiereBackup() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            
-            input.onchange = function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        const importierteDaten = JSON.parse(e.target.result);
-                        
-                        if (Array.isArray(importierteDaten)) {
-                            const sicherheitsabfrage = confirm(
-                                `Import von ${importierteDaten.length} Aufträgen?\n\n` +
-                                'ACHTUNG: Dies ersetzt alle aktuellen Daten!\n\n' +
-                                'Möchten Sie fortfahren?'
-                            );
-                            
-                            if (sicherheitsabfrage) {
-                                auftraege = importierteDaten;
-                                speichereDatenInStorage();
-                                zeigeAuftraege();
-                                updateStats();
-                                alert(`${importierteDaten.length} Aufträge erfolgreich importiert!`);
-                            }
-                        } else {
-                            alert('Ungültiges Backup-Format!');
-                        }
-                    } catch (error) {
-                        console.error('Import-Fehler:', error);
-                        alert('Fehler beim Importieren der Datei!');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            
-            input.click();
+        // Beilagen hinzufügen
+        function addBeilage(containerId) {
+            const container = document.getElementById(containerId);
+            const block = document.createElement('div');
+            block.className = 'speise-block';
+            block.style.marginLeft = '0';
+            block.innerHTML = `
+                <label>Beilage:</label>
+                <select>
+                    <option disabled>-- Kartoffelbeilagen --</option>
+                    <option>Kartoffelgratin</option>
+                    <option>Röstkartoffeln</option>
+                    <option>Kartoffelspalten</option>
+                    <option>Salzkartoffeln</option>
+                    <option>Bratkartoffeln</option>
+                    <option>Kartoffelklöße</option>
+                    <option>Reis</option>
+                    <option disabled>-- Gemüse --</option>
+                    <option>bunte Gemüseauswahl</option>
+                    <option>geschmortes Kraut</option>
+                    <option>Rotkohl</option>
+                    <option>Erbsen & Möhren</option>
+                    <option>Rosenkohl</option>
+                    <option>Blumenkohl</option>
+                    <option disabled>-- Salate --</option>
+                    <option>Kartoffelsalat</option>
+                    <option>Speckkartoffelsalat</option>
+                    <option>Nudelsalat</option>
+                    <option>frischer gemischter Salat</option>
+                    <option>Eisberg Melonen Salat</option>
+                    <option>Griechischer Salat</option>
+                    <option>Krautsalat Natur</option>
+                    <option>Krautsalat in Yogurtsoße</option>
+                </select>
+                <label>Personenzahl:</label>
+                <input type="number" min="1" placeholder="Anzahl Personen">
+                <button type="button" onclick="this.parentElement.remove()">🗑️ Beilage entfernen</button>
+            `;
+            container.appendChild(block);
         }
         
-        // Alle Daten löschen (mit Sicherheitsabfrage)
-        function loescheAlleDaten() {
-            const sicherheitsabfrage = confirm(
-                'ACHTUNG: Alle Aufträge löschen?\n\n' +
-                'Diese Aktion kann nicht rückgängig gemacht werden!\n\n' +
-                'Empfehlung: Erstellen Sie zuerst ein Backup.\n\n' +
-                'Wirklich alle Daten löschen?'
-            );
-            
-            if (sicherheitsabfrage) {
-                auftraege = [];
-                speichereDatenInStorage();
-                zeigeAuftraege();
-                updateStats();
-                alert('Alle Aufträge wurden gelöscht!');
-            }
+        // Nachspeisen hinzufügen
+        function addNachspeise() {
+            const container = document.getElementById('nachspeisen-container');
+            const block = document.createElement('div');
+            block.className = 'speise-block';
+            const nachspeiseId = 'nachspeise_' + Date.now();
+            block.innerHTML = `
+                <label>Nachspeisen-Kategorie:</label>
+                <select onchange="updateNachspeisenOptionen('${nachspeiseId}')">
+                    <option value="">-- Kategorie wählen --</option>
+                    <option value="N1">N1 - Große Schale (Standard-Portionen)</option>
+                    <option value="N2">N2 - Kleine Portionsschälchen</option>
+                    <option value="N3">N3 - Gourmet Nachspeisen</option>
+                    <option value="Backshop">🧁 Backshop - Kuchen, Donuts & Muffins</option>
+                </select>
+                <div id="${nachspeiseId}_speisen" style="margin-top: 10px; display: none;">
+                    <label>Nachspeise:</label>
+                    <select class="nachspeise-auswahl">
+                        <option>-- Erst Kategorie wählen --</option>
+                    </select>
+                    <label class="mengen-label">Personenzahl:</label>
+                    <input type="number" min="1" placeholder="Anzahl Personen">
+                    <div class="backshop-notizen" style="display: none; margin-top: 10px;">
+                        <label>Belag-Details:</label>
+                        <textarea placeholder="z.B. 5x Lachs, 4x Schinken, 3x vegetarisch" rows="2" style="resize: vertical; font-family: Arial, sans-serif;"></textarea>
+                    </div>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()">🗑️ Entfernen</button>
+            `;
+            container.appendChild(block);
         }
 
-        // Erweiterte Berechnungsfunktionen
+        // Nachspeisen-Optionen aktualisieren
+        function updateNachspeisenOptionen(nachspeiseId) {
+            const kategorie = event.target.value;
+            const speisenDiv = document.getElementById(nachspeiseId + '_speisen');
+            const speisenSelect = speisenDiv.querySelector('.nachspeise-auswahl');
+            const mengenLabel = speisenDiv.querySelector('.mengen-label');
+            const mengenInput = speisenDiv.querySelector('input[type="number"]');
+            
+            if (!kategorie) {
+                speisenDiv.style.display = 'none';
+                return;
+            }
+            
+            speisenDiv.style.display = 'block';
+            speisenSelect.innerHTML = '<option>-- Bitte wählen --</option>';
+            
+            // Labels und Placeholder je nach Kategorie anpassen
+            if (kategorie === 'Backshop') {
+                mengenLabel.textContent = 'Menge:';
+                mengenInput.placeholder = 'Anzahl (Bleche/Stück)';
+            } else {
+                mengenLabel.textContent = 'Personenzahl:';
+                mengenInput.placeholder = 'Anzahl Personen';
+            }
+            
+            // Optionen je nach Kategorie
+            let optionen = [];
+            
+            if (kategorie === 'N1' || kategorie === 'N2') {
+                optionen = [
+                    'Mousse au Chocolat',
+                    'Rote Grütze mit Vanillesoße',
+                    'Tiramisu',
+                    'Obstsalat',
+                    'Mascarponequark mit Himbeermark',
+                    'Vanillemousse'
+                ];
+            } else if (kategorie === 'N3') {
+                optionen = [
+                    'Bayrische Creme mit Tellerbiskuit und Erdbeere',
+                    'Karamell mit Schokosoße',
+                    'Frischkäsecreme mit Aprikose',
+                    'Schwarzwälder Kirsch',
+                    'Joghurtcreme mit zweierlei von der Himbeere'
+                ];
+            } else if (kategorie === 'Backshop') {
+                speisenSelect.innerHTML = `
+                    <option value="">-- Backware wählen --</option>
+                    <optgroup label="🍰 Blechkuchen (15 Stücke/Blech)">
+                        <option value="Blechkuchen - Zitronenkuchen">Zitronenkuchen</option>
+                        <option value="Blechkuchen - Quark-Mandarine">Quark-Mandarine</option>
+                        <option value="Blechkuchen - Quark-Kirsche">Quark-Kirsche</option>
+                        <option value="Blechkuchen - Apfelkuchen mit Zimt">Apfelkuchen mit Zimt</option>
+                        <option value="Blechkuchen - Butterkuchen mit Mandeln">Butterkuchen mit Mandeln</option>
+                        <option value="Blechkuchen - Schokokuchen">Schokokuchen</option>
+                    </optgroup>
+                    <optgroup label="🥖 Belegte Brötchen (halbe Brötchen)">
+                        <option value="Brötchen - hell Normalbelag">Halbes Brötchen hell (Normalbelag)</option>
+                        <option value="Brötchen - dunkel Normalbelag">Halbes Brötchen dunkel (Normalbelag)</option>
+                        <option value="Brötchen - hell Premiumbelag">Halbes Brötchen hell (Premiumbelag)</option>
+                        <option value="Brötchen - dunkel Premiumbelag">Halbes Brötchen dunkel (Premiumbelag)</option>
+                    </optgroup>
+                    <optgroup label="🍩 Donuts (einzeln)">
+                        <option value="Donut - Käsekuchen">Käsekuchen</option>
+                        <option value="Donut - Vanille">Vanille</option>
+                        <option value="Donut - Schoko">Schoko</option>
+                        <option value="Donut - Kaugummi">Kaugummi</option>
+                        <option value="Donut - Pinky Crunch">Pinky Crunch</option>
+                    </optgroup>
+                    <optgroup label="🧁 Muffins (einzeln)">
+                        <option value="Muffin - Blaubeere">Blaubeere</option>
+                        <option value="Muffin - Apfel">Apfel</option>
+                        <option value="Muffin - Marmor">Marmor</option>
+                        <option value="Muffin - Schoko">Schoko</option>
+                    </optgroup>
+                    <optgroup label="🥯 Spezialitäten (mit Notizen)">
+                        <option value="Bagel - belegt">Halber belegter Bagel</option>
+                        <option value="Canapés">Canapés</option>
+                    </optgroup>
+                `;
+                
+                // Event-Listener für Backshop-Notizen hinzufügen
+                setTimeout(() => {
+                    const backshopSelect = speisenDiv.querySelector('.nachspeise-auswahl');
+                    if (backshopSelect) {
+                        backshopSelect.addEventListener('change', function() {
+                            toggleBackshopNotizen(nachspeiseId, this.value);
+                        });
+                    }
+                }, 10);
+                
+                return;
+            }
+            
+            optionen.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                speisenSelect.appendChild(optionElement);
+            });
+        }
+        
+        // Berechnungsfunktionen
         function berechneVorspeise(speise, anzahl, mitBrot) {
             const liter = anzahl * 0.5; // 0,5 Liter pro Person für alle Suppen
             let ergebnis = { 
@@ -421,6 +653,16 @@
                     ergebnis.zusatz = ` + ${brotePulled} Brot${brotePulled > 1 ? 'e' : ''}`;
                     break;
                     
+                case 'Rinderrouladen':
+                    ergebnis.gewicht = anzahl * 300; // 300g für Rinderrouladen
+                    break;
+                    
+                case 'Vegetarische Gemüseschnitzel':
+                    ergebnis.gewicht = 0; // Kein Gewicht, da Stückzahl
+                    ergebnis.einheit = 'Stück';
+                    ergebnis.zusatz = `${anzahl * 2} Schnitzel`; // 2 Schnitzel pro Person
+                    return ergebnis;
+                    
                 case 'Amerikanische Knabbereien':
                     // Spezielle Berechnung für Amerikanische Knabbereien
                     const rippen = Math.ceil((anzahl / 5) * 3); // 3 Rippen pro 5 Personen
@@ -434,14 +676,140 @@
                     return ergebnis;
                     
                 default:
+                    // Für individuelle Speisen oder unbekannte Speisen
+                    if (speise.includes('individuell:') || speise === 'individuell') {
+                        ergebnis.gewicht = 0;
+                        ergebnis.einheit = '';
+                        ergebnis.zusatz = '(individuelle Speise - keine Berechnung)';
+                        return ergebnis;
+                    }
                     ergebnis.gewicht = anzahl * 250; // Standard 250g pro Person
             }
             
             return ergebnis;
         }
         
+        // Speisen sammeln
+        function sammeleSpeisen() {
+            const vorspeisen = [];
+            const hauptspeisen = [];
+            const beilagen = [];
+            const nachspeisen = [];
+            
+            // Vorspeisen sammeln
+            document.querySelectorAll('#vorspeisen-container .speise-block').forEach((block) => {
+                const select = block.querySelector('select');
+                const anzahl = block.querySelector('input[type="number"]');
+                const brot = block.querySelector('input[type="checkbox"]');
+                
+                if (select && anzahl && select.value !== '-- Bitte wählen --' && parseInt(anzahl.value) > 0) {
+                    vorspeisen.push({
+                        speise: select.value,
+                        anzahl: parseInt(anzahl.value),
+                        brot: brot ? brot.checked : false
+                    });
+                }
+            });
+            
+            // Hauptspeisen sammeln (mit zugehörigen Beilagen)
+            document.querySelectorAll('#hauptspeisen-container .speise-block').forEach((block) => {
+                const select = block.querySelector('select');
+                const anzahl = block.querySelector('input[type="number"]');
+                const individuellInput = block.querySelector('.individuelle-speise');
+                
+                if (select && anzahl && parseInt(anzahl.value) > 0) {
+                    let speiseName = select.value;
+                    
+                    // Prüfen ob individuelle Speise gewählt wurde
+                    if (select.value === 'individuell' && individuellInput && individuellInput.value.trim()) {
+                        speiseName = `individuell: ${individuellInput.value.trim()}`;
+                    } else if (select.value === 'individuell') {
+                        return; // Überspringen wenn individuell gewählt aber nichts eingegeben
+                    } else if (select.value === '-- Bitte wählen --') {
+                        return; // Überspringen wenn nichts gewählt
+                    }
+                    
+                    // Beilagen zu dieser Hauptspeise sammeln
+                    const hauptspeiseBeilagen = [];
+                    block.querySelectorAll('.beilagen-container .speise-block').forEach((beilageBlock) => {
+                        const beilageSelect = beilageBlock.querySelector('select');
+                        const beilageAnzahl = beilageBlock.querySelector('input[type="number"]');
+                        
+                        if (beilageSelect && beilageAnzahl && beilageSelect.value && parseInt(beilageAnzahl.value) > 0) {
+                            hauptspeiseBeilagen.push({
+                                speise: beilageSelect.value,
+                                anzahl: parseInt(beilageAnzahl.value)
+                            });
+                            
+                            // Auch zur globalen Beilagen-Liste für Zusammenfassung hinzufügen
+                            beilagen.push({
+                                speise: beilageSelect.value,
+                                anzahl: parseInt(beilageAnzahl.value)
+                            });
+                        }
+                    });
+                    
+                    hauptspeisen.push({
+                        speise: speiseName,
+                        anzahl: parseInt(anzahl.value),
+                        beilagen: hauptspeiseBeilagen // Beilagen zu dieser Hauptspeise
+                    });
+                }
+            });
+            
+            // Nachspeisen sammeln
+            document.querySelectorAll('#nachspeisen-container .speise-block').forEach((block) => {
+                const kategorieSelect = block.querySelector('select');
+                const speisenDiv = block.querySelector('[id$="_speisen"]');
+                
+                if (kategorieSelect && speisenDiv && kategorieSelect.value) {
+                    const speisenSelect = speisenDiv.querySelector('.nachspeise-auswahl');
+                    const anzahlInput = speisenDiv.querySelector('input[type="number"]');
+                    const notizenTextarea = speisenDiv.querySelector('.backshop-notizen textarea');
+                    
+                    if (speisenSelect && anzahlInput && speisenSelect.value !== '-- Bitte wählen --' && parseInt(anzahlInput.value) > 0) {
+                        const nachspeise = {
+                            kategorie: kategorieSelect.value,
+                            speise: speisenSelect.value,
+                            anzahl: parseInt(anzahlInput.value)
+                        };
+                        
+                        // Backshop-Notizen hinzufügen, falls vorhanden
+                        if (notizenTextarea && notizenTextarea.value.trim()) {
+                            nachspeise.backshopNotizen = notizenTextarea.value.trim();
+                        }
+                        
+                        nachspeisen.push(nachspeise);
+                    }
+                }
+            });
+            
+            return { vorspeisen, hauptspeisen, beilagen, nachspeisen };
+        }
+        
+        // Beilagen zusammenfassen
+        function fasseBeilagenZusammen(beilagen) {
+            const zusammengefasst = {};
+            
+            beilagen.forEach(beilage => {
+                if (zusammengefasst[beilage.speise]) {
+                    zusammengefasst[beilage.speise] += beilage.anzahl;
+                } else {
+                    zusammengefasst[beilage.speise] = beilage.anzahl;
+                }
+            });
+            
+            return Object.entries(zusammengefasst).map(([speise, anzahl]) => ({
+                speise: speise,
+                anzahl: anzahl
+            }));
+        }
+        
+        // Auftrag speichern
         function speichereAuftrag() {
             const kunde = document.getElementById('kunde').value;
+            const telefon = document.getElementById('telefon').value;
+            const notizen = document.getElementById('notizen').value;
             const datum = document.getElementById('datum').value;
             const stunden = document.getElementById('stunden').value;
             const minuten = document.getElementById('minuten').value;
@@ -449,18 +817,18 @@
             const gaeste = document.getElementById('gaeste').value;
             
             if (!kunde || !datum || !stunden || !minuten || !ort || !gaeste) {
-                alert('Bitte füllen Sie alle Felder aus!');
+                alert('Bitte füllen Sie alle Pflichtfelder aus!');
                 return;
             }
             
             const speisen = sammeleSpeisen();
-            
-            // Beilagen zusammenfassen vor dem Speichern
             const beilagenZusammengefasst = fasseBeilagenZusammen(speisen.beilagen);
             
             const auftrag = {
                 id: Date.now(),
                 kunde: kunde,
+                telefon: telefon,
+                notizen: notizen,
                 datum: datum,
                 zeit: stunden + ':' + minuten,
                 ort: ort,
@@ -472,12 +840,13 @@
             };
             
             auftraege.push(auftrag);
-            speichereDatenInStorage(); // Automatisch speichern
             zeigeAuftraege();
             updateStats();
             
             // Formular leeren
             document.getElementById('kunde').value = '';
+            document.getElementById('telefon').value = '';
+            document.getElementById('notizen').value = '';
             document.getElementById('datum').value = '';
             document.getElementById('stunden').value = '';
             document.getElementById('minuten').value = '';
@@ -487,321 +856,8 @@
             document.getElementById('hauptspeisen-container').innerHTML = '';
             document.getElementById('nachspeisen-container').innerHTML = '';
         }
-
-        function fasseBeilagenZusammen(beilagen) {
-            const zusammengefasst = {};
-            
-            // Alle Beilagen durchgehen und Personenanzahlen addieren
-            beilagen.forEach(beilage => {
-                if (zusammengefasst[beilage.speise]) {
-                    // Wenn Beilage bereits existiert, Personenanzahl addieren
-                    zusammengefasst[beilage.speise] += beilage.anzahl;
-                } else {
-                    // Neue Beilage hinzufügen
-                    zusammengefasst[beilage.speise] = beilage.anzahl;
-                }
-            });
-            
-            // Zurück in Array-Format konvertieren
-            return Object.entries(zusammengefasst).map(([speise, anzahl]) => ({
-                speise: speise,
-                anzahl: anzahl
-            }));
-        }
         
-        function sammeleSpeisen() {
-            const vorspeisen = [];
-            const hauptspeisen = [];
-            const beilagen = [];
-            const nachspeisen = [];
-            
-            // Debug: Alle Speisen-Container prüfen
-            console.log('Sammle Speisen...');
-            
-            // Vorspeisen sammeln
-            document.querySelectorAll('#vorspeisen-container .speise-block').forEach((block, index) => {
-                const select = block.querySelector('select');
-                const anzahl = block.querySelector('input[type="number"]');
-                const brot = block.querySelector('input[type="checkbox"]');
-                
-                console.log(`Vorspeise ${index}:`, select?.value, anzahl?.value);
-                
-                if (select && anzahl && select.value !== '-- Bitte wählen --' && parseInt(anzahl.value) > 0) {
-                    vorspeisen.push({
-                        speise: select.value,
-                        anzahl: parseInt(anzahl.value),
-                        brot: brot ? brot.checked : false
-                    });
-                }
-            });
-            
-            // Hauptspeisen sammeln
-            document.querySelectorAll('#hauptspeisen-container .speise-block').forEach((block, index) => {
-                const select = block.querySelector('select');
-                const anzahl = block.querySelector('input[type="number"]');
-                
-                console.log(`Hauptspeise ${index}:`, select?.value, anzahl?.value);
-                
-                if (select && anzahl && select.value !== '-- Bitte wählen --' && parseInt(anzahl.value) > 0) {
-                    hauptspeisen.push({
-                        speise: select.value,
-                        anzahl: parseInt(anzahl.value)
-                    });
-                }
-                
-                // Beilagen zu dieser Hauptspeise sammeln
-                block.querySelectorAll('.beilagen-container .speise-block').forEach((beilageBlock, bIndex) => {
-                    const beilageSelect = beilageBlock.querySelector('select');
-                    const beilageAnzahl = beilageBlock.querySelector('input[type="number"]');
-                    
-                    console.log(`Beilage ${index}-${bIndex}:`, beilageSelect?.value, beilageAnzahl?.value);
-                    
-                    if (beilageSelect && beilageAnzahl && beilageSelect.value && parseInt(beilageAnzahl.value) > 0) {
-                        beilagen.push({
-                            speise: beilageSelect.value,
-                            anzahl: parseInt(beilageAnzahl.value)
-                        });
-                    }
-                });
-            });
-            
-            // Nachspeisen sammeln
-            document.querySelectorAll('#nachspeisen-container .speise-block').forEach((block, index) => {
-                const kategorieSelect = block.querySelector('select');
-                const speisenDiv = block.querySelector('[id$="_speisen"]');
-                
-                if (kategorieSelect && speisenDiv && kategorieSelect.value) {
-                    const speisenSelect = speisenDiv.querySelector('.nachspeise-auswahl');
-                    const anzahlInput = speisenDiv.querySelector('input[type="number"]');
-                    
-                    console.log(`Nachspeise ${index}:`, kategorieSelect.value, speisenSelect?.value, anzahlInput?.value);
-                    
-                    if (speisenSelect && anzahlInput && speisenSelect.value !== '-- Bitte wählen --' && parseInt(anzahlInput.value) > 0) {
-                        nachspeisen.push({
-                            kategorie: kategorieSelect.value,
-                            speise: speisenSelect.value,
-                            anzahl: parseInt(anzahlInput.value)
-                        });
-                    }
-                }
-            });
-            
-            console.log('Gesammelte Speisen:', { vorspeisen, hauptspeisen, beilagen, nachspeisen });
-            
-            return { vorspeisen, hauptspeisen, beilagen, nachspeisen };
-        }
-        
-        function addVorspeise() {
-            const container = document.getElementById('vorspeisen-container');
-            const block = document.createElement('div');
-            block.className = 'speise-block';
-            block.innerHTML = `
-                <label>Vorspeise:</label>
-                <select>
-                    <option>-- Bitte wählen --</option>
-                    <option>Kartoffelsuppe mit Würstchen</option>
-                    <option>Kartoffelsuppe Vegetarisch</option>
-                    <option>Lauch Hack Suppe</option>
-                    <option>Gulaschsuppe</option>
-                    <option>Broccolicremesuppe</option>
-                    <option>Chilli Con Carne</option>
-                    <option>Chilli Sin Carne</option>
-                </select>
-                <label>Personenzahl:</label>
-                <input type="number" min="1" placeholder="Anzahl Personen">
-                <label><input type="checkbox"> Brot dazu?</label>
-                <button type="button" onclick="this.parentElement.remove()">🗑️ Entfernen</button>
-            `;
-            container.appendChild(block);
-        }
-        
-        function addHauptspeise() {
-            const container = document.getElementById('hauptspeisen-container');
-            const block = document.createElement('div');
-            block.className = 'speise-block';
-            const beilagenId = 'beilagen_' + Date.now();
-            block.innerHTML = `
-                <label>Hauptspeise:</label>
-                <select>
-                    <option>-- Bitte wählen --</option>
-                    <option>Spanferkel mit Beilagen</option>
-                    <option>BBQ Schwein mit Beilagen</option>
-                    <option>Spanferkel ohne Beilagen</option>
-                    <option>BBQ Schwein ohne Beilagen</option>
-                    <option>Honigschinken</option>
-                    <option>Grillschinken</option>
-                    <option>Glasierte Pute</option>
-                    <option>Rinderbraten</option>
-                    <option>Kräuterbraten</option>
-                    <option>Gyrosbraten</option>
-                    <option>Griechischer Rahmbraten</option>
-                    <option>Spießbraten</option>
-                    <option>Altdeutscher Bierbraten</option>
-                    <option>Schweinefilet in Sahnesauce</option>
-                    <option>Kassler im Blätterteig</option>
-                    <option>Bayrischer Leberkäse</option>
-                    <option>Grünkohl</option>
-                    <option>Wildschweinbraten</option>
-                    <option>Amerikanische Knabbereien</option>
-                    <option>Pulled Pork</option>
-                </select>
-                <label>Personenzahl:</label>
-                <input type="number" min="1" placeholder="Anzahl Personen">
-                <div class="beilagen-container" id="${beilagenId}"></div>
-                <button type="button" onclick="addBeilage('${beilagenId}')">+ Beilage hinzufügen</button>
-                <button type="button" onclick="this.parentElement.remove()">🗑️ Hauptspeise entfernen</button>
-            `;
-            container.appendChild(block);
-        }
-        
-        function addBeilage(containerId) {
-            const container = document.getElementById(containerId);
-            const block = document.createElement('div');
-            block.className = 'speise-block';
-            block.style.marginLeft = '0';
-            block.innerHTML = `
-                <label>Beilage:</label>
-                <select>
-                    <option disabled>-- Kartoffelbeilagen --</option>
-                    <option>Kartoffelgratin</option>
-                    <option>Röstkartoffeln</option>
-                    <option>Kartoffelspalten</option>
-                    <option>Salzkartoffeln</option>
-                    <option>Bratkartoffeln</option>
-                    <option>Kartoffelklöße</option>
-                    <option>Reis</option>
-                    <option disabled>-- Gemüse --</option>
-                    <option>bunte Gemüseauswahl</option>
-                    <option>geschmortes Kraut</option>
-                    <option>Erbsen & Möhren</option>
-                    <option>Rosenkohl</option>
-                    <option>Brokkoli</option>
-                    <option>Blumenkohl</option>
-                    <option disabled>-- Salate --</option>
-                    <option>Kartoffelsalat</option>
-                    <option>Speckkartoffelsalat</option>
-                    <option>Nudelsalat</option>
-                    <option>frischer gemischter Salat</option>
-                    <option>Eisberg Melonen Salat</option>
-                    <option>Griechischer Salat</option>
-                    <option>Krautsalat Natur</option>
-                    <option>Krautsalat in Yogurtsoße</option>
-                </select>
-                <label>Personenzahl:</label>
-                <input type="number" min="1" placeholder="Anzahl Personen">
-                <button type="button" onclick="this.parentElement.remove()">🗑️ Beilage entfernen</button>
-            `;
-            container.appendChild(block);
-        }
-        
-        function addNachspeise() {
-            const container = document.getElementById('nachspeisen-container');
-            const block = document.createElement('div');
-            block.className = 'speise-block';
-            const nachspeiseId = 'nachspeise_' + Date.now();
-            block.innerHTML = `
-                <label>Nachspeisen-Kategorie:</label>
-                <select onchange="updateNachspeisenOptionen('${nachspeiseId}')">
-                    <option value="">-- Kategorie wählen --</option>
-                    <option value="N1">N1 - Große Schale (Standard-Portionen)</option>
-                    <option value="N2">N2 - Kleine Portionsschälchen</option>
-                    <option value="N3">N3 - Gourmet Nachspeisen</option>
-                    <option value="Backshop">🧁 Backshop - Kuchen, Donuts & Muffins</option>
-                </select>
-                <div id="${nachspeiseId}_speisen" style="margin-top: 10px; display: none;">
-                    <label>Nachspeise:</label>
-                    <select class="nachspeise-auswahl">
-                        <option>-- Erst Kategorie wählen --</option>
-                    </select>
-                    <label class="mengen-label">Personenzahl:</label>
-                    <input type="number" min="1" placeholder="Anzahl Personen">
-                </div>
-                <button type="button" onclick="this.parentElement.remove()">🗑️ Entfernen</button>
-            `;
-            container.appendChild(block);
-        }
-
-        function updateNachspeisenOptionen(nachspeiseId) {
-            const kategorie = event.target.value;
-            const speisenDiv = document.getElementById(nachspeiseId + '_speisen');
-            const speisenSelect = speisenDiv.querySelector('.nachspeise-auswahl');
-            const mengenLabel = speisenDiv.querySelector('.mengen-label');
-            const mengenInput = speisenDiv.querySelector('input[type="number"]');
-            
-            if (!kategorie) {
-                speisenDiv.style.display = 'none';
-                return;
-            }
-            
-            speisenDiv.style.display = 'block';
-            speisenSelect.innerHTML = '<option>-- Bitte wählen --</option>';
-            
-            // Labels und Placeholder je nach Kategorie anpassen
-            if (kategorie === 'Backshop') {
-                mengenLabel.textContent = 'Menge:';
-                mengenInput.placeholder = 'Anzahl (Bleche/Stück)';
-            } else {
-                mengenLabel.textContent = 'Personenzahl:';
-                mengenInput.placeholder = 'Anzahl Personen';
-            }
-            
-            // Alle 6 Standard-Nachspeisen für N1 und N2
-            let optionen = [];
-            
-            if (kategorie === 'N1' || kategorie === 'N2') {
-                optionen = [
-                    'Mousse au Chocolat',
-                    'Rote Grütze mit Vanillesoße',
-                    'Tiramisu',
-                    'Obstsalat',
-                    'Mascarponequark mit Himbeermark',
-                    'Vanillemousse'
-                ];
-            } else if (kategorie === 'N3') {
-                optionen = [
-                    'Bayrische Creme mit Tellerbiskuit und Erdbeere',
-                    'Karamell mit Schokosoße',
-                    'Frischkäsecreme mit Aprikose',
-                    'Schwarzwälder Kirsch',
-                    'Joghurtcreme mit zweierlei von der Himbeere'
-                ];
-            } else if (kategorie === 'Backshop') {
-                // Backshop hat Unterkategorien
-                speisenSelect.innerHTML = `
-                    <option value="">-- Backware wählen --</option>
-                    <optgroup label="🍰 Blechkuchen (15 Stücke/Blech)">
-                        <option value="Blechkuchen - Zitronenkuchen">Zitronenkuchen</option>
-                        <option value="Blechkuchen - Quark-Mandarine">Quark-Mandarine</option>
-                        <option value="Blechkuchen - Quark-Kirsche">Quark-Kirsche</option>
-                        <option value="Blechkuchen - Apfelkuchen mit Zimt">Apfelkuchen mit Zimt</option>
-                        <option value="Blechkuchen - Butterkuchen mit Mandeln">Butterkuchen mit Mandeln</option>
-                        <option value="Blechkuchen - Schokokuchen">Schokokuchen</option>
-                    </optgroup>
-                    <optgroup label="🍩 Donuts (einzeln)">
-                        <option value="Donut - Käsekuchen">Käsekuchen</option>
-                        <option value="Donut - Vanille">Vanille</option>
-                        <option value="Donut - Schoko">Schoko</option>
-                        <option value="Donut - Kaugummi">Kaugummi</option>
-                        <option value="Donut - Pinky Crunch">Pinky Crunch</option>
-                    </optgroup>
-                    <optgroup label="🧁 Muffins (einzeln)">
-                        <option value="Muffin - Blaubeere">Blaubeere</option>
-                        <option value="Muffin - Apfel">Apfel</option>
-                        <option value="Muffin - Marmor">Marmor</option>
-                        <option value="Muffin - Schoko">Schoko</option>
-                    </optgroup>
-                `;
-                return;
-            }
-            
-            optionen.forEach(option => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option;
-                optionElement.textContent = option;
-                speisenSelect.appendChild(optionElement);
-            });
-        }
-        
+        // Aufträge anzeigen
         function zeigeAuftraege() {
             const liste = document.getElementById('liste');
             
@@ -835,7 +891,7 @@
                 return;
             }
             
-            let html = '';
+            let html = '<div class="auftraege-grid">';
             gefiltert.forEach(auftrag => {
                 const kw = getWeekNumber(auftrag.datum);
                 let speisenHtml = '';
@@ -844,7 +900,7 @@
                 if (auftrag.vorspeisen && auftrag.vorspeisen.length > 0) {
                     speisenHtml += '<br><strong>Vorspeisen:</strong><br>';
                     auftrag.vorspeisen.forEach(v => {
-                        const liter = v.anzahl * 0.5; // 0,5 Liter pro Person
+                        const liter = v.anzahl * 0.5;
                         const literText = liter >= 1 ? `${liter.toFixed(1)} L` : `${(liter * 1000)} ml`;
                         const brotText = v.brot ? ` + ${Math.ceil(v.anzahl / 6)} Brot${Math.ceil(v.anzahl / 6) > 1 ? 'e' : ''}` : '';
                         speisenHtml += `• ${v.speise} (${v.anzahl} Pers., ${literText})${brotText}<br>`;
@@ -860,20 +916,32 @@
                         if (berechnung.gewicht > 0) {
                             const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
                             speisenHtml += `• ${h.speise} (${h.anzahl} Pers., ${gewichtText})${berechnung.zusatz}<br>`;
+                        } else if (berechnung.zusatz.includes('Schnitzel')) {
+                            // Spezielle Anzeige für Gemüseschnitzel
+                            speisenHtml += `• ${h.speise} (${h.anzahl} Pers., ${berechnung.zusatz})<br>`;
                         } else {
-                            // Für Amerikanische Knabbereien (kein Gewicht, nur Aufschlüsselung)
-                            speisenHtml += `• ${h.speise} (${h.anzahl} Pers.)${berechnung.zusatz}<br>`;
+                            // Für Amerikanische Knabbereien oder individuelle Speisen
+                            const speisenName = h.speise.startsWith('individuell:') ? h.speise.replace('individuell: ', '') : h.speise;
+                            speisenHtml += `• ${speisenName} (${h.anzahl} Pers.)${berechnung.zusatz}<br>`;
                         }
                     });
                 }
                 
-                // Beilagen anzeigen (bereits zusammengefasst)
+                // Beilagen anzeigen
                 if (auftrag.beilagen && auftrag.beilagen.length > 0) {
                     speisenHtml += '<br><strong>Beilagen:</strong><br>';
                     auftrag.beilagen.forEach(b => {
-                        const gewicht = b.anzahl * 250; // 250g pro Person
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        speisenHtml += `• ${b.speise} (${b.anzahl} Pers., ${gewichtText})<br>`;
+                        // Spezielle Behandlung für bestimmte Salate (nur Personenanzahl)
+                        const nurPersonenSalate = ['frischer gemischter Salat', 'Griechischer Salat', 'Eisberg Melonen Salat'];
+                        
+                        if (nurPersonenSalate.includes(b.speise)) {
+                            speisenHtml += `• ${b.speise} (${b.anzahl} Pers.)<br>`;
+                        } else {
+                            // Standard-Berechnung mit Gewicht (250g pro Person)
+                            const gewicht = b.anzahl * 250;
+                            const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
+                            speisenHtml += `• ${b.speise} (${b.anzahl} Pers., ${gewichtText})<br>`;
+                        }
                     });
                 }
                 
@@ -899,54 +967,84 @@
                         } else if (n.kategorie === 'Backshop') {
                             kategorieText = '[🧁 Backshop] ';
                             if (n.speise && n.speise.startsWith('Blechkuchen')) {
-                                const stuecke = n.anzahl * 15; // 15 Stücke pro Blech
+                                const stuecke = n.anzahl * 15;
                                 mengenText = `(${n.anzahl} Blech${n.anzahl > 1 ? 'e' : ''} = ${stuecke} Stücke)`;
                             } else {
                                 mengenText = `(${n.anzahl} Stück)`;
                             }
-                        } else if (n.kategorie) {
-                            kategorieText = `[${n.kategorie}] `;
-                            const gewicht = n.anzahl * 120;
-                            mengenText = `(${n.anzahl} Pers., ${gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`})`;
                         } else {
-                            // Fallback für alte Daten ohne Kategorie
                             const gewicht = n.anzahl * 120;
                             mengenText = `(${n.anzahl} Pers., ${gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`})`;
                         }
                         
                         speisenHtml += `• ${kategorieText}${n.speise} ${mengenText}<br>`;
+                        
+                        // Backshop-Notizen anzeigen, falls vorhanden
+                        if (n.backshopNotizen) {
+                            speisenHtml += `&nbsp;&nbsp;📝 ${n.backshopNotizen}<br>`;
+                        }
                     });
                 }
                 
                 html += `
                     <div class="auftrag">
-                        <input type="checkbox" class="druckauswahl" data-id="${auftrag.id}" style="width: auto; margin-right: 10px;">
-                        <strong>${auftrag.kunde}</strong> – ${auftrag.datum} um ${auftrag.zeit} <small>(KW ${kw})</small><br>
-                        📍 ${auftrag.ort}<br>
-                        👥 <strong>${auftrag.gaeste} Gäste</strong>
-                        ${speisenHtml}
-                        <button onclick="loescheAuftrag(${auftrag.id})" style="width: auto; padding: 5px 10px; margin-top: 10px; background: #dc3545;">
-                            🗑️ Löschen
-                        </button>
-                        <button onclick="starteBearbeitung(${auftrag.id})" style="width: auto; padding: 5px 10px; margin-top: 10px; margin-left: 10px; background: #007bff;">
-                            ✏️ Bearbeiten
-                        </button>
+                        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <input type="checkbox" class="druckauswahl" data-id="${auftrag.id}" style="width: auto; margin-right: 10px;">
+                            <strong style="font-size: 1.1em; color: #667eea;">${auftrag.kunde}</strong>
+                        </div>
+                        
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <span><strong>📅 ${auftrag.datum}</strong></span>
+                                <span><strong>🕐 ${auftrag.zeit}</strong></span>
+                                <small style="color: #6c757d;">(KW ${kw})</small>
+                            </div>
+                            ${auftrag.telefon ? `<div style="margin-bottom: 5px;">📞 ${auftrag.telefon}</div>` : ''}
+                            <div style="margin-bottom: 5px;">📍 ${auftrag.ort}</div>
+                            <div><strong>👥 ${auftrag.gaeste} Gäste</strong></div>
+                            ${auftrag.notizen ? `<div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-style: italic;">📝 ${auftrag.notizen}</div>` : ''}
+                        </div>
+                        
+                        <div style="font-size: 0.95em; line-height: 1.4;">
+                            ${speisenHtml}
+                        </div>
+                        
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button onclick="starteBearbeitung(${auftrag.id})" style="width: auto; padding: 8px 12px; background: #007bff; font-size: 0.9em;">
+                                ✏️ Bearbeiten
+                            </button>
+                            <button onclick="loescheAuftrag(${auftrag.id})" style="width: auto; padding: 8px 12px; background: #dc3545; font-size: 0.9em;">
+                                🗑️ Löschen
+                            </button>
+                        </div>
                     </div>
                 `;
             });
             
+            html += '</div>'; // Schließe das Grid
             liste.innerHTML = html;
         }
-
+        
+        // Auftrag löschen
+        function loescheAuftrag(id) {
+            if (confirm('Auftrag wirklich löschen?')) {
+                auftraege = auftraege.filter(a => a.id !== id);
+                zeigeAuftraege();
+                updateStats();
+            }
+        }
+        
+        // Bearbeitung starten
         function starteBearbeitung(id) {
             const auftrag = auftraege.find(a => a.id === id);
             if (!auftrag) return;
             
             // Formular mit vorhandenen Daten füllen
             document.getElementById('kunde').value = auftrag.kunde;
+            document.getElementById('telefon').value = auftrag.telefon || '';
+            document.getElementById('notizen').value = auftrag.notizen || '';
             document.getElementById('datum').value = auftrag.datum;
             
-            // Zeit aufteilen
             const [stunden, minuten] = auftrag.zeit.split(':');
             document.getElementById('stunden').value = stunden;
             document.getElementById('minuten').value = minuten;
@@ -977,18 +1075,35 @@
                 auftrag.hauptspeisen.forEach(hauptspeise => {
                     addHauptspeise();
                     const letzterBlock = document.querySelector('#hauptspeisen-container .speise-block:last-child');
-                    letzterBlock.querySelector('select').value = hauptspeise.speise;
-                    letzterBlock.querySelector('input[type="number"]').value = hauptspeise.anzahl;
+                    const select = letzterBlock.querySelector('select');
+                    const anzahlInput = letzterBlock.querySelector('input[type="number"]');
+                    const individuellInput = letzterBlock.querySelector('.individuelle-speise');
+                    
+                    // Prüfen ob es eine individuelle Speise ist
+                    if (hauptspeise.speise.startsWith('individuell:')) {
+                        select.value = 'individuell';
+                        toggleIndividuelleEingabe(select);
+                        const individuellText = hauptspeise.speise.replace('individuell: ', '');
+                        if (individuellInput) {
+                            individuellInput.value = individuellText;
+                        }
+                    } else {
+                        select.value = hauptspeise.speise;
+                    }
+                    
+                    anzahlInput.value = hauptspeise.anzahl;
                 });
             }
             
-            // Beilagen wiederherstellen (zu den Hauptspeisen verteilen)
+            // Beilagen wiederherstellen (zu den entsprechenden Hauptspeisen)
             if (auftrag.beilagen && auftrag.hauptspeisen && auftrag.hauptspeisen.length > 0) {
-                auftrag.beilagen.forEach(beilage => {
-                    // Beilage zur ersten Hauptspeise hinzufügen
-                    const ersteHauptspeise = document.querySelector('#hauptspeisen-container .speise-block');
-                    if (ersteHauptspeise) {
-                        const beilagenContainer = ersteHauptspeise.querySelector('.beilagen-container');
+                // Beilagen gleichmäßig auf die Hauptspeisen verteilen (vereinfacht)
+                auftrag.beilagen.forEach((beilage, index) => {
+                    const hauptspeiseIndex = index % auftrag.hauptspeisen.length; // Rundlauf-Verteilung
+                    const hauptspeiseBlocks = document.querySelectorAll('#hauptspeisen-container .speise-block');
+                    
+                    if (hauptspeiseBlocks[hauptspeiseIndex]) {
+                        const beilagenContainer = hauptspeiseBlocks[hauptspeiseIndex].querySelector('.beilagen-container');
                         const containerId = beilagenContainer.id;
                         addBeilage(containerId);
                         
@@ -1005,28 +1120,10 @@
                     addNachspeise();
                     const letzterBlock = document.querySelector('#nachspeisen-container .speise-block:last-child');
                     
-                    // Kategorie setzen
                     const kategorieSelect = letzterBlock.querySelector('select');
                     if (nachspeise.kategorie) {
                         kategorieSelect.value = nachspeise.kategorie;
                         
-                        // Optionen laden
-                        const nachspeiseId = letzterBlock.querySelector('[id$="_speisen"]').id.replace('_speisen', '');
-                        updateNachspeisenOptionen(nachspeiseId);
-                        
-                        // Speise und Anzahl setzen
-                        setTimeout(() => {
-                            const speisenSelect = letzterBlock.querySelector('.nachspeise-auswahl');
-                            const anzahlInput = letzterBlock.querySelector('input[type="number"]');
-                            
-                            if (speisenSelect && anzahlInput) {
-                                speisenSelect.value = nachspeise.speise;
-                                anzahlInput.value = nachspeise.anzahl;
-                            }
-                        }, 100);
-                    } else {
-                        // Fallback für alte Daten ohne Kategorie
-                        kategorieSelect.value = 'N1'; // Standard auf N1 setzen
                         const nachspeiseId = letzterBlock.querySelector('[id$="_speisen"]').id.replace('_speisen', '');
                         updateNachspeisenOptionen(nachspeiseId);
                         
@@ -1056,14 +1153,15 @@
             abbrechenButton.setAttribute('onclick', 'brecheBearbeitungAb()');
             speichernButton.parentNode.insertBefore(abbrechenButton, speichernButton.nextSibling);
             
-            // Nach oben scrollen
             window.scrollTo(0, 0);
-            
             alert('Auftrag wird bearbeitet. Ändern Sie die Daten und klicken Sie "Änderungen speichern".');
         }
-
+        
+        // Änderungen speichern
         function speichereAenderungen(id) {
             const kunde = document.getElementById('kunde').value;
+            const telefon = document.getElementById('telefon').value;
+            const notizen = document.getElementById('notizen').value;
             const datum = document.getElementById('datum').value;
             const stunden = document.getElementById('stunden').value;
             const minuten = document.getElementById('minuten').value;
@@ -1071,19 +1169,20 @@
             const gaeste = document.getElementById('gaeste').value;
             
             if (!kunde || !datum || !stunden || !minuten || !ort || !gaeste) {
-                alert('Bitte füllen Sie alle Felder aus!');
+                alert('Bitte füllen Sie alle Pflichtfelder aus!');
                 return;
             }
             
             const speisen = sammeleSpeisen();
             const beilagenZusammengefasst = fasseBeilagenZusammen(speisen.beilagen);
             
-            // Auftrag finden und aktualisieren
             const auftragIndex = auftraege.findIndex(a => a.id === id);
             if (auftragIndex !== -1) {
                 auftraege[auftragIndex] = {
                     ...auftraege[auftragIndex],
                     kunde: kunde,
+                    telefon: telefon,
+                    notizen: notizen,
                     datum: datum,
                     zeit: stunden + ':' + minuten,
                     ort: ort,
@@ -1095,17 +1194,18 @@
                 };
                 
                 brecheBearbeitungAb();
-                speichereDatenInStorage(); // Automatisch speichern
                 zeigeAuftraege();
                 updateStats();
-                
                 alert('Auftrag erfolgreich aktualisiert!');
             }
         }
-
+        
+        // Bearbeitung abbrechen
         function brecheBearbeitungAb() {
             // Formular leeren
             document.getElementById('kunde').value = '';
+            document.getElementById('telefon').value = '';
+            document.getElementById('notizen').value = '';
             document.getElementById('datum').value = '';
             document.getElementById('stunden').value = '';
             document.getElementById('minuten').value = '';
@@ -1128,7 +1228,8 @@
                 abbrechenButton.remove();
             }
         }
-
+        
+        // Hilfsfunktionen für Datums- und Wochenberechnung
         function getWeekNumber(date) {
             const d = new Date(date);
             d.setHours(0, 0, 0, 0);
@@ -1146,13 +1247,13 @@
             endOfWeek.setDate(startOfWeek.getDate() + 6);
             return { start: startOfWeek, end: endOfWeek };
         }
-
+        
+        // Filter-Funktionen
         function updateFilterOptions() {
             const filterTyp = document.getElementById('filterTyp').value;
             const filterWert = document.getElementById('filterWert');
             const filterWoche = document.getElementById('filterWoche');
             
-            // Alle Filter verstecken
             filterWert.style.display = 'none';
             filterWoche.style.display = 'none';
             
@@ -1186,7 +1287,8 @@
                 });
             });
         }
-
+        
+        // Druck-Funktionen
         function druckeAuswahl() {
             const checked = Array.from(document.querySelectorAll(".druckauswahl:checked"));
             if (checked.length === 0) {
@@ -1204,14 +1306,16 @@
                 html += `<div style='margin-bottom:30px; border-bottom: 1px solid #ccc; padding-bottom: 20px;'>
                     <h3>${auftrag.kunde}</h3>
                     <p><strong>Datum:</strong> ${auftrag.datum} – ${auftrag.zeit}<br>
+                    ${auftrag.telefon ? `<strong>Telefon:</strong> ${auftrag.telefon}<br>` : ''}
                     <strong>Ort:</strong> ${auftrag.ort}<br>
-                    <strong>Gäste:</strong> ${auftrag.gaeste}</p>`;
+                    <strong>Gäste:</strong> ${auftrag.gaeste}
+                    ${auftrag.notizen ? `<br><strong>Notizen:</strong> ${auftrag.notizen}` : ''}</p>`;
                 
                 // Speisen für Druck formatieren
                 if (auftrag.vorspeisen && auftrag.vorspeisen.length > 0) {
                     html += '<h4>Vorspeisen:</h4><ul>';
                     auftrag.vorspeisen.forEach(v => {
-                        const liter = v.anzahl * 0.5; // 0,5 Liter pro Person
+                        const liter = v.anzahl * 0.5;
                         const literText = liter >= 1 ? `${liter.toFixed(1)} L` : `${(liter * 1000)} ml`;
                         const brotText = v.brot ? ` + ${Math.ceil(v.anzahl / 6)} Brot${Math.ceil(v.anzahl / 6) > 1 ? 'e' : ''}` : '';
                         html += `<li>${v.speise} (${v.anzahl} Pers., ${literText})${brotText}</li>`;
@@ -1223,12 +1327,15 @@
                     html += '<h4>Hauptspeisen:</h4><ul>';
                     auftrag.hauptspeisen.forEach(h => {
                         const berechnung = berechneHauptspeise(h.speise, h.anzahl);
+                        const speisenName = h.speise.startsWith('individuell:') ? h.speise.replace('individuell: ', '') : h.speise;
                         
                         if (berechnung.gewicht > 0) {
                             const gewichtText = berechnung.gewicht >= 1000 ? `${(berechnung.gewicht/1000).toFixed(1)} kg` : `${berechnung.gewicht} g`;
-                            html += `<li>${h.speise} (${h.anzahl} Pers., ${gewichtText})${berechnung.zusatz}</li>`;
+                            html += `<li>${speisenName} (${h.anzahl} Pers., ${gewichtText})${berechnung.zusatz}</li>`;
+                        } else if (berechnung.zusatz.includes('Schnitzel')) {
+                            html += `<li>${speisenName} (${h.anzahl} Pers., ${berechnung.zusatz})</li>`;
                         } else {
-                            html += `<li>${h.speise} (${h.anzahl} Pers.)${berechnung.zusatz}</li>`;
+                            html += `<li>${speisenName} (${h.anzahl} Pers.)${berechnung.zusatz}</li>`;
                         }
                     });
                     html += '</ul>';
@@ -1237,9 +1344,17 @@
                 if (auftrag.beilagen && auftrag.beilagen.length > 0) {
                     html += '<h4>Beilagen:</h4><ul>';
                     auftrag.beilagen.forEach(b => {
-                        const gewicht = b.anzahl * 250;
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        html += `<li>${b.speise} (${b.anzahl} Pers., ${gewichtText})</li>`;
+                        // Spezielle Behandlung für bestimmte Salate (nur Personenanzahl)
+                        const nurPersonenSalate = ['frischer gemischter Salat', 'Griechischer Salat', 'Eisberg Melonen Salat'];
+                        
+                        if (nurPersonenSalate.includes(b.speise)) {
+                            html += `<li>${b.speise} (${b.anzahl} Pers.)</li>`;
+                        } else {
+                            // Standard-Berechnung mit Gewicht (250g pro Person)
+                            const gewicht = b.anzahl * 250;
+                            const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
+                            html += `<li>${b.speise} (${b.anzahl} Pers., ${gewichtText})</li>`;
+                        }
                     });
                     html += '</ul>';
                 }
@@ -1247,21 +1362,38 @@
                 if (auftrag.nachspeisen && auftrag.nachspeisen.length > 0) {
                     html += '<h4>Nachspeisen:</h4><ul>';
                     auftrag.nachspeisen.forEach(n => {
-                        const gewicht = n.anzahl * 120;
-                        const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        
                         let kategorieText = '';
-                        if (n.kategorie === 'N1') {
-                            kategorieText = '[N1 - Große Schale] ';
-                        } else if (n.kategorie === 'N2') {
-                            kategorieText = '[N2 - Kleine Schälchen] ';
-                        } else if (n.kategorie === 'N3') {
-                            kategorieText = '[N3 - Gourmet] ';
-                        } else if (n.kategorie) {
-                            kategorieText = `[${n.kategorie}] `;
+                        let mengenText = '';
+                        
+                        if (n.kategorie === 'Backshop') {
+                            kategorieText = '[🧁 Backshop] ';
+                            if (n.speise && n.speise.startsWith('Blechkuchen')) {
+                                const stuecke = n.anzahl * 15;
+                                mengenText = `(${n.anzahl} Blech${n.anzahl > 1 ? 'e' : ''} = ${stuecke} Stücke)`;
+                            } else {
+                                mengenText = `(${n.anzahl} Stück)`;
+                            }
+                        } else {
+                            const gewicht = n.anzahl * 120;
+                            const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
+                            
+                            if (n.kategorie === 'N1') {
+                                kategorieText = '[N1 - Große Schale] ';
+                            } else if (n.kategorie === 'N2') {
+                                kategorieText = '[N2 - Kleine Schälchen] ';
+                            } else if (n.kategorie === 'N3') {
+                                kategorieText = '[N3 - Gourmet] ';
+                            }
+                            
+                            mengenText = `(${n.anzahl} Pers., ${gewichtText})`;
                         }
                         
-                        html += `<li>${kategorieText}${n.speise} (${n.anzahl} Pers., ${gewichtText})</li>`;
+                        html += `<li>${kategorieText}${n.speise} ${mengenText}</li>`;
+                        
+                        // Backshop-Notizen in Druckansicht
+                        if (n.backshopNotizen) {
+                            html += `<li style="margin-left: 20px; font-style: italic;">📝 ${n.backshopNotizen}</li>`;
+                        }
                     });
                     html += '</ul>';
                 }
@@ -1290,33 +1422,107 @@
             win.print();
         }
         
-        function loescheAuftrag(id) {
-            if (confirm('Auftrag wirklich löschen?')) {
-                auftraege = auftraege.filter(a => a.id !== id);
-                speichereDatenInStorage(); // Automatisch speichern
-                zeigeAuftraege();
-                updateStats();
+        // Backup-Funktionen (Dummy-Implementierungen für Claude.ai)
+        function exportiereBackup() {
+            const dateiName = `Partyservice_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            const datenString = JSON.stringify(auftraege, null, 2);
+            
+            // In Claude.ai können wir kein echtes Datei-Download machen
+            // Stattdessen zeigen wir die Daten an
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html>
+                    <head>
+                        <title>Backup-Daten</title>
+                        <style>
+                            body { font-family: monospace; margin: 20px; }
+                            pre { background: #f5f5f5; padding: 20px; border-radius: 5px; }
+                        </style>
+                    </head>
+                    <body>
+                        <h1>Backup-Daten (${dateiName})</h1>
+                        <p>Kopieren Sie diese Daten und speichern Sie sie als JSON-Datei:</p>
+                        <pre>${datenString}</pre>
+                    </body>
+                </html>
+            `);
+            
+            alert(`Backup erstellt! Die Daten werden in einem neuen Fenster angezeigt.`);
+        }
+        
+        function importiereBackup() {
+            const jsonData = prompt('Bitte fügen Sie Ihre Backup-JSON-Daten hier ein:');
+            
+            if (!jsonData) return;
+            
+            try {
+                const importierteDaten = JSON.parse(jsonData);
+                
+                if (Array.isArray(importierteDaten)) {
+                    const sicherheitsabfrage = confirm(
+                        `Import von ${importierteDaten.length} Aufträgen?\n\n` +
+                        'ACHTUNG: Dies ersetzt alle aktuellen Daten!\n\n' +
+                        'Möchten Sie fortfahren?'
+                    );
+                    
+                    if (sicherheitsabfrage) {
+                        auftraege = importierteDaten;
+                        zeigeAuftraege();
+                        updateStats();
+                        alert(`${importierteDaten.length} Aufträge erfolgreich importiert!`);
+                    }
+                } else {
+                    alert('Ungültiges Backup-Format!');
+                }
+            } catch (error) {
+                console.error('Import-Fehler:', error);
+                alert('Fehler beim Importieren der Datei!');
             }
         }
         
+        function loescheAlleDaten() {
+            const sicherheitsabfrage = confirm(
+                'ACHTUNG: Alle Aufträge löschen?\n\n' +
+                'Diese Aktion kann nicht rückgängig gemacht werden!\n\n' +
+                'Empfehlung: Erstellen Sie zuerst ein Backup.\n\n' +
+                'Wirklich alle Daten löschen?'
+            );
+            
+            if (sicherheitsabfrage) {
+                auftraege = [];
+                zeigeAuftraege();
+                updateStats();
+                alert('Alle Aufträge wurden gelöscht!');
+            }
+        }
+        
+        // Statistiken aktualisieren
         function updateStats() {
             const heute = new Date().toISOString().split('T')[0];
             const heuteCount = auftraege.filter(a => a.datum === heute).length;
             
+            // Woche berechnen (Montag bis Sonntag)
+            const heute_date = new Date();
+            const montag = new Date(heute_date);
+            montag.setDate(heute_date.getDate() - heute_date.getDay() + 1);
+            const sonntag = new Date(montag);
+            sonntag.setDate(montag.getDate() + 6);
+            
+            const wocheCount = auftraege.filter(a => {
+                const auftragsDatum = new Date(a.datum);
+                return auftragsDatum >= montag && auftragsDatum <= sonntag;
+            }).length;
+            
             document.getElementById('total').textContent = `Gesamt: ${auftraege.length}`;
             document.getElementById('today').textContent = `Heute: ${heuteCount}`;
-            document.getElementById('week').textContent = `Diese Woche: ${heuteCount}`;
+            document.getElementById('week').textContent = `Diese Woche: ${wocheCount}`;
         }
         
         // Initialisierung beim Laden der Seite
         window.onload = function() {
-            ladeDatenAusStorage(); // Daten aus localStorage laden
             updateStats();
             zeigeAuftraege();
-            
-            // Storage-Status anzeigen
             console.log('Partyservice Kleinfeldt - Auftragsverwaltung geladen');
-            console.log(`Aktuell ${auftraege.length} Aufträge im Speicher`);
         };
     </script>
 </body>
