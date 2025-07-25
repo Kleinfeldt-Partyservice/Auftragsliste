@@ -337,10 +337,64 @@
                 <p style="color: #666;">Noch keine Aufträge vorhanden.</p>
             </div>
         </div>
+        
+        <div class="form-section">
+            <h2>🛒 Bedarfsliste</h2>
+            
+            <div class="row">
+                <div class="col">
+                    <label for="bedarfWoche">Kalenderwoche für Bedarfsliste:</label>
+                    <select id="bedarfWoche" onchange="erstelleBedarfsliste()">
+                        <option value="">-- Kalenderwoche wählen --</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <button onclick="erstelleBedarfsliste()" style="background: #28a745;">
+                        📊 Bedarfsliste erstellen
+                    </button>
+                </div>
+            </div>
+            
+            <div id="bedarfsliste-output" style="margin-top: 20px;">
+                <p style="color: #666;">Wählen Sie eine Kalenderwoche aus, um die Bedarfsliste zu erstellen.</p>
+            </div>
+        </div>
     </div>
 
     <script>
         let auftraege = [];
+        
+        // Zutatendatenbank für Bedarfsliste
+        const zutatenDatenbank = {
+            // Vorspeisen (pro 5 Liter)
+            'Kartoffelsuppe Vegetarisch': {
+                'Suppengrün TK': { menge: 2.5, einheit: 'kg' },
+                'Kartoffelpürrepulver': { menge: 3, einheit: 'Tüten' }
+            },
+            'Kartoffelsuppe mit Würstchen': {
+                'Suppengrün TK': { menge: 2.5, einheit: 'kg' },
+                'Kartoffelpürrepulver': { menge: 3, einheit: 'Tüten' },
+                'Wiener Würstchen': { menge: 10, einheit: 'Stück' }
+            },
+            // Gulaschsuppe (umgerechnet auf 5 Liter)
+            'Gulaschsuppe': {
+                'Schweineschulter': { menge: 1.5, einheit: 'kg' },
+                'Zwiebelwürfel TK': { menge: 1.0, einheit: 'kg' },
+                'Paprika AS TK': { menge: 0.375, einheit: 'kg' },
+                'Gulaschsuppengewürz': { menge: 0.05, einheit: 'kg' }
+            },
+            'Lauch Hack Suppe': {
+                'Lauch TK': { menge: 2.5, einheit: 'kg' },
+                'Hack gemischt': { menge: 2.5, einheit: 'kg' },
+                'Kräuterfrischkäse': { menge: 0.9, einheit: 'kg' }
+            },
+            'Broccolicremesuppe': {
+                'Broccoli TK': { menge: 2.5, einheit: 'kg' },
+                'Kräuterfrischkäse': { menge: 0.6, einheit: 'kg' },
+                'Sahne': { menge: 0.5, einheit: 'L' }
+            }
+            // Weitere Speisen werden hier nach und nach hinzugefügt
+        };
         
         // Vorspeisen hinzufügen
         function addVorspeise() {
@@ -842,6 +896,7 @@
             auftraege.push(auftrag);
             zeigeAuftraege();
             updateStats();
+            updateBedarfsWochen(); // Bedarfs-Wochen aktualisieren
             
             // Formular leeren
             document.getElementById('kunde').value = '';
@@ -1229,7 +1284,232 @@
             }
         }
         
-        // Hilfsfunktionen für Datums- und Wochenberechnung
+        // Bedarfsliste erstellen
+        function erstelleBedarfsliste() {
+            const selectedWoche = document.getElementById('bedarfWoche').value;
+            const output = document.getElementById('bedarfsliste-output');
+            
+            if (!selectedWoche) {
+                output.innerHTML = '<p style="color: #666;">Bitte wählen Sie eine Kalenderwoche aus.</p>';
+                return;
+            }
+            
+            const [jahr, woche] = selectedWoche.split('-').map(Number);
+            const { start, end } = getDateFromWeek(jahr, woche);
+            
+            // Aufträge für die gewählte Woche finden
+            const wochenAuftraege = auftraege.filter(a => {
+                const auftragsDatum = new Date(a.datum);
+                return auftragsDatum >= start && auftragsDatum <= end;
+            });
+            
+            if (wochenAuftraege.length === 0) {
+                output.innerHTML = `
+                    <div style="padding: 20px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffeaa7;">
+                        <h4>⚠️ Keine Aufträge gefunden</h4>
+                        <p>Für KW ${woche}/${jahr} sind keine Aufträge vorhanden.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Bedarfsberechnung
+            const gesamtBedarf = {};
+            let auftragsDetails = '';
+            
+            wochenAuftraege.forEach(auftrag => {
+                auftragsDetails += `<div style="margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                    <strong>${auftrag.kunde}</strong> - ${auftrag.datum} (${auftrag.gaeste} Gäste)
+                </div>`;
+                
+                // Vorspeisen analysieren
+                if (auftrag.vorspeisen) {
+                    auftrag.vorspeisen.forEach(vorspeise => {
+                        if (zutatenDatenbank[vorspeise.speise]) {
+                            // Benötigte Liter berechnen (0,5L pro Person)
+                            const benoetigteLiter = vorspeise.anzahl * 0.5;
+                            // Anzahl 5-Liter-Einheiten
+                            const fuenfLiterEinheiten = benoetigteLiter / 5;
+                            
+                            // Zutaten für diese Speise berechnen
+                            const zutaten = zutatenDatenbank[vorspeise.speise];
+                            for (const [zutat, info] of Object.entries(zutaten)) {
+                                const benoetigteMenge = info.menge * fuenfLiterEinheiten;
+                                
+                                if (!gesamtBedarf[zutat]) {
+                                    gesamtBedarf[zutat] = { menge: 0, einheit: info.einheit };
+                                }
+                                gesamtBedarf[zutat].menge += benoetigteMenge;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Bedarfsliste HTML erstellen
+            let bedarfsHtml = `
+                <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid #28a745;">
+                    <h3 style="color: #28a745; margin-top: 0;">🛒 Bedarfsliste KW ${woche}/${jahr}</h3>
+                    <p><strong>Zeitraum:</strong> ${start.toLocaleDateString('de-DE')} - ${end.toLocaleDateString('de-DE')}</p>
+                    <p><strong>Aufträge:</strong> ${wochenAuftraege.length}</p>
+                    
+                    <h4>📦 Benötigte Zutaten:</h4>
+            `;
+            
+            if (Object.keys(gesamtBedarf).length > 0) {
+                bedarfsHtml += '<ul style="list-style: none; padding: 0;">';
+                for (const [zutat, info] of Object.entries(gesamtBedarf)) {
+                    const anzeigeMenge = info.einheit === 'Stück' || info.einheit === 'Tüten' ? 
+                        Math.ceil(info.menge) : info.menge.toFixed(1);
+                    bedarfsHtml += `<li style="padding: 8px; margin: 5px 0; background: #f8f9fa; border-radius: 5px; border-left: 4px solid #28a745;">
+                        <strong>${zutat}:</strong> ${anzeigeMenge} ${info.einheit}
+                    </li>`;
+                }
+                bedarfsHtml += '</ul>';
+            } else {
+                bedarfsHtml += '<p style="color: #6c757d;">Keine Zutaten berechenbar (Rezepte noch nicht hinterlegt).</p>';
+            }
+            
+            bedarfsHtml += `
+                    <h4>📋 Aufträge in dieser Woche:</h4>
+                    ${auftragsDetails}
+                    
+                    <button onclick="druckeBedarfsliste('${selectedWoche}')" style="margin-top: 15px; background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+                        🖨️ Bedarfsliste drucken
+                    </button>
+                </div>
+            `;
+            
+            output.innerHTML = bedarfsHtml;
+        }
+        
+        // Bedarfsliste drucken
+        function druckeBedarfsliste(wochenString) {
+            const [jahr, woche] = wochenString.split('-').map(Number);
+            const { start, end } = getDateFromWeek(jahr, woche);
+            
+            const wochenAuftraege = auftraege.filter(a => {
+                const auftragsDatum = new Date(a.datum);
+                return auftragsDatum >= start && auftragsDatum <= end;
+            });
+            
+            const gesamtBedarf = {};
+            
+            wochenAuftraege.forEach(auftrag => {
+                if (auftrag.vorspeisen) {
+                    auftrag.vorspeisen.forEach(vorspeise => {
+                        if (zutatenDatenbank[vorspeise.speise]) {
+                            const benoetigteLiter = vorspeise.anzahl * 0.5;
+                            const fuenfLiterEinheiten = benoetigteLiter / 5;
+                            
+                            const zutaten = zutatenDatenbank[vorspeise.speise];
+                            for (const [zutat, info] of Object.entries(zutaten)) {
+                                const benoetigteMenge = info.menge * fuenfLiterEinheiten;
+                                
+                                if (!gesamtBedarf[zutat]) {
+                                    gesamtBedarf[zutat] = { menge: 0, einheit: info.einheit };
+                                }
+                                gesamtBedarf[zutat].menge += benoetigteMenge;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            let druckHtml = `
+                <h1>Partyservice Kleinfeldt - Bedarfsliste</h1>
+                <p style="margin-bottom: 30px;">Krähenstraße 29, 23552 Lübeck | Tel: 0451-75230</p>
+                <h2>KW ${woche}/${jahr} (${start.toLocaleDateString('de-DE')} - ${end.toLocaleDateString('de-DE')})</h2>
+                <p><strong>Aufträge:</strong> ${wochenAuftraege.length}</p>
+                
+                <h3>Benötigte Zutaten:</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: left;">Zutat</th>
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: right;">Menge</th>
+                            <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Einheit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            for (const [zutat, info] of Object.entries(gesamtBedarf)) {
+                const anzeigeMenge = info.einheit === 'Stück' || info.einheit === 'Tüten' ? 
+                    Math.ceil(info.menge) : info.menge.toFixed(1);
+                druckHtml += `
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 12px;">${zutat}</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: right;">${anzeigeMenge}</td>
+                        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">${info.einheit}</td>
+                    </tr>
+                `;
+            }
+            
+            druckHtml += `
+                    </tbody>
+                </table>
+            `;
+            
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html>
+                    <head>
+                        <title>Bedarfsliste KW ${woche}/${jahr}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; }
+                            h1 { color: #667eea; border-bottom: 2px solid #667eea; }
+                            table { border-collapse: collapse; width: 100%; }
+                            th, td { border: 1px solid #ddd; padding: 8px; }
+                            th { background-color: #f2f2f2; }
+                        </style>
+                    </head>
+                    <body>${druckHtml}</body>
+                </html>
+            `);
+            win.document.close();
+            win.print();
+        }
+        
+        // Kalenderwochen für Bedarfsliste aktualisieren
+        function updateBedarfsWochen() {
+            const bedarfWoche = document.getElementById('bedarfWoche');
+            const aktuelleDaten = auftraege.map(a => new Date(a.datum));
+            const jahre = [...new Set(aktuelleDaten.map(d => d.getFullYear()))].sort();
+            
+            bedarfWoche.innerHTML = '<option value="">-- Kalenderwoche wählen --</option>';
+            
+            // Aktuelle Woche hinzufügen
+            const heute = new Date();
+            const aktuelleKW = getWeekNumber(heute.toISOString().split('T')[0]);
+            const aktuellesJahr = heute.getFullYear();
+            bedarfWoche.innerHTML += `<option value="${aktuellesJahr}-${aktuelleKW}">KW ${aktuelleKW}/${aktuellesJahr} (Diese Woche)</option>`;
+            
+            // Nächste Woche hinzufügen
+            const naechsteWoche = new Date(heute);
+            naechsteWoche.setDate(heute.getDate() + 7);
+            const naechsteKW = getWeekNumber(naechsteWoche.toISOString().split('T')[0]);
+            const naechstesJahr = naechsteWoche.getFullYear();
+            bedarfWoche.innerHTML += `<option value="${naechstesJahr}-${naechsteKW}">KW ${naechsteKW}/${naechstesJahr} (Nächste Woche)</option>`;
+            
+            // Wochen mit Aufträgen hinzufügen
+            jahre.forEach(jahr => {
+                const jahresAuftraege = auftraege.filter(a => new Date(a.datum).getFullYear() === jahr);
+                const wochen = [...new Set(jahresAuftraege.map(a => getWeekNumber(a.datum)))].sort((a, b) => a - b);
+                
+                wochen.forEach(woche => {
+                    const optionValue = `${jahr}-${woche}`;
+                    // Vermeiden von Duplikaten
+                    if (!bedarfWoche.querySelector(`option[value="${optionValue}"]`)) {
+                        const { start, end } = getDateFromWeek(jahr, woche);
+                        const option = document.createElement('option');
+                        option.value = optionValue;
+                        option.textContent = `KW ${woche}/${jahr} (${start.toLocaleDateString('de-DE')} - ${end.toLocaleDateString('de-DE')})`;
+                        bedarfWoche.appendChild(option);
+                    }
+                });
+            });
+        }
         function getWeekNumber(date) {
             const d = new Date(date);
             d.setHours(0, 0, 0, 0);
@@ -1522,7 +1802,8 @@
         window.onload = function() {
             updateStats();
             zeigeAuftraege();
-            console.log('Partyservice Kleinfeldt - Auftragsverwaltung geladen');
+            updateBedarfsWochen();
+            console.log('Partyservice Kleinfeldt - Auftragserfassung geladen');
         };
     </script>
 </body>
