@@ -50,6 +50,13 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
+        .auftraege-liste {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
         .form-group {
             margin-bottom: 20px;
         }
@@ -97,13 +104,6 @@
         
         .time-picker select {
             width: 80px;
-        }
-        
-        .auftraege-liste {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
         .speise-block {
@@ -433,60 +433,57 @@
                 'Kartoffeln festkochend (2,5kg Netz)': { menge: 0.111, einheit: 'Netz' }
             },
             'Reis': {
-                'Reis (Beutel)': { menge: 0.1, einheit: 'Beutel' } // 1 Beutel für 10 Personen = 0,1 Beutel pro Person
+                'Reis (Beutel)': { menge: 0.1, einheit: 'Beutel' }
             },
             'Kartoffelklöße': {
-                'Kartoffelklöße (24er Beutel)': { menge: 0.083, einheit: 'Beutel' } // 2 Klöße pro Person ÷ 24 Klöße/Beutel = 0,083 Beutel pro Person
+                'Kartoffelklöße (24er Beutel)': { menge: 0.083, einheit: 'Beutel' }
             },
-            // Gemüsebeilagen (250g pro Person)
             'Erbsen & Möhren': {
-                'Erbsen & Möhren (Karton)': { menge: 0.025, einheit: 'Karton' } // 250g pro Person ÷ 10kg/Karton = 0,025 Karton pro Person
+                'Erbsen & Möhren (Karton)': { menge: 0.025, einheit: 'Karton' }
             },
             'Rosenkohl': {
-                'Rosenkohl (Karton)': { menge: 0.025, einheit: 'Karton' } // 250g pro Person ÷ 10kg/Karton = 0,025 Karton pro Person
+                'Rosenkohl (Karton)': { menge: 0.025, einheit: 'Karton' }
             },
             'Blumenkohl': {
-                'Blumenkohl (Karton)': { menge: 0.025, einheit: 'Karton' } // 250g pro Person ÷ 10kg/Karton = 0,025 Karton pro Person
+                'Blumenkohl (Karton)': { menge: 0.025, einheit: 'Karton' }
             },
             'Rotkohl': {
-                'Rotkohl (4kg Dose)': { menge: 0.0625, einheit: 'Dosen' } // 250g pro Person ÷ 4000g/Dose = 0,0625 Dosen pro Person
+                'Rotkohl (4kg Dose)': { menge: 0.0625, einheit: 'Dosen' }
             },
             'geschmortes Kraut': {
-                'Geschmortes Kraut (10kg Dose)': { menge: 0.025, einheit: 'Dosen' } // 250g pro Person ÷ 10000g/Dose = 0,025 Dosen pro Person
+                'Geschmortes Kraut (10kg Dose)': { menge: 0.025, einheit: 'Dosen' }
             },
             'bunte Gemüseauswahl': {
-                'Erbsen & Möhren (Karton)': { menge: 0.0083, einheit: 'Karton' }, // 83g pro Person (250g ÷ 3) ÷ 10kg/Karton = 0,0083 Karton pro Person
-                'Rosenkohl (Karton)': { menge: 0.0083, einheit: 'Karton' }, // 83g pro Person (250g ÷ 3) ÷ 10kg/Karton = 0,0083 Karton pro Person
-                'Blumenkohl (Karton)': { menge: 0.0083, einheit: 'Karton' } // 83g pro Person (250g ÷ 3) ÷ 10kg/Karton = 0,0083 Karton pro Person
+                'Erbsen & Möhren (Karton)': { menge: 0.0083, einheit: 'Karton' },
+                'Rosenkohl (Karton)': { menge: 0.0083, einheit: 'Karton' },
+                'Blumenkohl (Karton)': { menge: 0.0083, einheit: 'Karton' }
             },
-            // Salate
             'Kartoffelsalat': {
-                'Kartoffel in Scheiben (2kg Paket)': { menge: 0.1, einheit: 'Paket' } // 250g Salat/Person → 200g Kartoffeln/Person (8kg für 10kg Salat) → 200g ÷ 2000g = 0,1 Paket pro Person
+                'Kartoffel in Scheiben (2kg Paket)': { menge: 0.1, einheit: 'Paket' }
             },
             'Speckkartoffelsalat': {
-                'Kartoffel in Scheiben (2kg Paket)': { menge: 0.1, einheit: 'Paket' } // 250g Salat/Person → 200g Kartoffeln/Person (8kg für 10kg Salat) → 200g ÷ 2000g = 0,1 Paket pro Person
+                'Kartoffel in Scheiben (2kg Paket)': { menge: 0.1, einheit: 'Paket' }
             },
             'Nudelsalat': {
-                'Nudeln (5kg Sack)': { menge: 0.033, einheit: 'Sack' }, // 250g Salat/Person → 5kg Nudeln für 7,5kg Salat → 167g Nudeln/kg Salat → 250g×0,167=42g Nudeln/Person → 42g ÷ 5000g = 0,0083 → korrigiert für bessere Verhältnisse: 0,033
-                'Mexico Mix klein (Dose)': { menge: 0.1, einheit: 'Dosen' } // 3 Dosen für 7,5kg Salat → 0,4 Dosen/kg Salat → 250g×0,4/1000 = 0,1 Dosen pro Person
+                'Nudeln (5kg Sack)': { menge: 0.033, einheit: 'Sack' },
+                'Mexico Mix klein (Dose)': { menge: 0.1, einheit: 'Dosen' }
             },
             'Krautsalat in Yogurtsoße': {
-                'Weißkohl': { menge: 0.1875, einheit: 'kg' }, // 250g Salat/Person → 7,5kg Kohl für 10kg Salat → 187,5g Kohl/Person
-                'Grüne Paprika (frisch)': { menge: 0.025, einheit: 'Stück' }, // 1 Paprika für 10kg Salat → 0,1 Paprika/kg Salat → 250g×0,1/1000 = 0,025 Stück pro Person
-                'Knoblauch': { menge: 0.0025, einheit: 'kg' } // 100g für 10kg Salat → 10g/kg Salat → 250g×10g/1000g = 2,5g pro Person
+                'Weißkohl': { menge: 0.1875, einheit: 'kg' },
+                'Grüne Paprika (frisch)': { menge: 0.025, einheit: 'Stück' },
+                'Knoblauch': { menge: 0.0025, einheit: 'kg' }
             },
             'Krautsalat Natur': {
-                'Krautsalat Natur (5kg Eimer)': { menge: 0.05, einheit: 'Eimer' } // 250g pro Person ÷ 5000g/Eimer = 0,05 Eimer pro Person
+                'Krautsalat Natur (5kg Eimer)': { menge: 0.05, einheit: 'Eimer' }
             },
-            // Frische Salate (nur Anzahl + Hinweis)
             'frischer gemischter Salat': {
-                'Zutaten für frische Salate besorgen': { menge: 1, einheit: 'Salat' } // 1 Salat pro Bestellung als Hinweis
+                'Zutaten für frische Salate besorgen': { menge: 1, einheit: 'Salat' }
             },
             'Eisberg Melonen Salat': {
-                'Zutaten für frische Salate besorgen': { menge: 1, einheit: 'Salat' } // 1 Salat pro Bestellung als Hinweis
+                'Zutaten für frische Salate besorgen': { menge: 1, einheit: 'Salat' }
             },
             'Griechischer Salat': {
-                'Zutaten für frische Salate besorgen': { menge: 1, einheit: 'Salat' } // 1 Salat pro Bestellung als Hinweis
+                'Zutaten für frische Salate besorgen': { menge: 1, einheit: 'Salat' }
             }
         };
         
@@ -598,25 +595,195 @@
             container.appendChild(block);
         }
         
-        // Nachspeisen hinzufügen
+        // Nachspeisen hinzufügen (erweitert für Backshop)
         function addNachspeise() {
             const container = document.getElementById('nachspeisen-container');
             const block = document.createElement('div');
             block.className = 'speise-block';
+            const geschmackId = 'geschmack_' + Date.now();
+            const detailId = 'detail_' + Date.now();
             block.innerHTML = `
-                <label>Nachspeise:</label>
-                <select>
+                <label>Nachspeisen-Kategorie:</label>
+                <select onchange="updateGeschmackOptionen('${geschmackId}', this.value); resetDetailOptionen('${detailId}')">
                     <option>-- Bitte wählen --</option>
-                    <option>Mousse au Chocolat</option>
-                    <option>Rote Grütze mit Vanillesoße</option>
-                    <option>Tiramisu</option>
-                    <option>Obstsalat</option>
+                    <option value="N1">N1 (große Schüssel)</option>
+                    <option value="N2">N2 (kleine Portionsschälchen)</option>
+                    <option value="N3">N3 (Spezialitäten)</option>
+                    <option value="Backshop">Backshop</option>
                 </select>
-                <label>Personenzahl:</label>
-                <input type="number" min="1" placeholder="Anzahl Personen">
+                <label>Artikel/Geschmacksrichtung:</label>
+                <select id="${geschmackId}" onchange="updateDetailOptionen('${detailId}', this.value)" disabled>
+                    <option>-- Erst Kategorie wählen --</option>
+                </select>
+                <div id="detail-container-${detailId}" style="display: none;">
+                    <label id="detail-label-${detailId}">Auswahl:</label>
+                    <select id="${detailId}">
+                        <option>-- Erst Artikel wählen --</option>
+                    </select>
+                </div>
+                <label>Anzahl/Personenzahl:</label>
+                <input type="number" min="1" placeholder="Anzahl Personen/Stück">
                 <button type="button" onclick="this.parentElement.remove()">🗑️ Entfernen</button>
             `;
             container.appendChild(block);
+        }
+        
+        // Geschmacksoptionen für Nachspeisen aktualisieren
+        function updateGeschmackOptionen(geschmackId, kategorie) {
+            const geschmackSelect = document.getElementById(geschmackId);
+            
+            if (!kategorie || kategorie === '-- Bitte wählen --') {
+                geschmackSelect.disabled = true;
+                geschmackSelect.innerHTML = '<option>-- Erst Kategorie wählen --</option>';
+                return;
+            }
+            
+            geschmackSelect.disabled = false;
+            geschmackSelect.innerHTML = '<option>-- Geschmack wählen --</option>';
+            
+            if (kategorie === 'N1' || kategorie === 'N2') {
+                const optionen = [
+                    'Mousse au Chocolat',
+                    'Vanille-Mousse',
+                    'Stracciatella-Mousse',
+                    'Tiramisu',
+                    'Rote Grütze mit Vanillesauce',
+                    'Mascarponequark mit Himbeermark',
+                    'Obstsalat (je nach Verfügbarkeit)'
+                ];
+                
+                optionen.forEach(option => {
+                    geschmackSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else if (kategorie === 'N3') {
+                const optionen = [
+                    'Bayrische Creme mit Tellerbiskuit und Erdbeere',
+                    'Karamell mit Schokosoße',
+                    'Frischkäsecreme mit Aprikose',
+                    'Schwarzwälder Kirsch',
+                    'Joghurtcreme mit zweierlei von der Himbeere'
+                ];
+                
+                optionen.forEach(option => {
+                    geschmackSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else if (kategorie === 'Backshop') {
+                const optionen = [
+                    'halbe belegte Brötchen hell (Normalbelag)',
+                    'halbe belegte Brötchen dunkel (Normalbelag)',
+                    'halbe belegte Brötchen hell (Premiumbelag)',
+                    'halbe belegte Brötchen dunkel (Premiumbelag)',
+                    'halbe belegte Bagel',
+                    'Muffins',
+                    'Donuts',
+                    'Blechkuchen'
+                ];
+                
+                optionen.forEach(option => {
+                    geschmackSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            }
+        }
+        
+        // Nachspeisen hinzufügen (erweitert für Backshop)
+        function addNachspeise() {
+            const container = document.getElementById('nachspeisen-container');
+            const block = document.createElement('div');
+            block.className = 'speise-block';
+            const geschmackId = 'geschmack_' + Date.now();
+            const detailId = 'detail_' + Date.now();
+            block.innerHTML = `
+                <label>Nachspeisen-Kategorie:</label>
+                <select onchange="updateGeschmackOptionen('${geschmackId}', this.value); resetDetailOptionen('${detailId}')">
+                    <option>-- Bitte wählen --</option>
+                    <option value="N1">N1 (große Schüssel)</option>
+                    <option value="N2">N2 (kleine Portionsschälchen)</option>
+                    <option value="N3">N3 (Spezialitäten)</option>
+                    <option value="Backshop">Backshop</option>
+                </select>
+                <label>Artikel/Geschmacksrichtung:</label>
+                <select id="${geschmackId}" onchange="updateDetailOptionen('${detailId}', this.value)" disabled>
+                    <option>-- Erst Kategorie wählen --</option>
+                </select>
+                <div id="detail-container-${detailId}" style="display: none;">
+                    <label id="detail-label-${detailId}">Auswahl:</label>
+                    <select id="${detailId}">
+                        <option>-- Erst Artikel wählen --</option>
+                    </select>
+                </div>
+                <label>Anzahl/Personenzahl:</label>
+                <input type="number" min="1" placeholder="Anzahl Personen/Stück">
+                <button type="button" onclick="this.parentElement.remove()">🗑️ Entfernen</button>
+            `;
+            container.appendChild(block);
+        }
+        
+        // Detail-Optionen für Backshop-Artikel aktualisieren
+        function updateDetailOptionen(detailId, artikel) {
+            const detailSelect = document.getElementById(detailId);
+            const detailContainer = document.getElementById(`detail-container-${detailId}`);
+            const detailLabel = document.getElementById(`detail-label-${detailId}`);
+            
+            if (!artikel || artikel === '-- Geschmack wählen --') {
+                detailContainer.style.display = 'none';
+                return;
+            }
+            
+            detailSelect.innerHTML = '<option>-- Bitte wählen --</option>';
+            
+            if (artikel.includes('Normalbelag')) {
+                detailContainer.style.display = 'block';
+                detailLabel.textContent = 'Belag-Auswahl:';
+                const optionen = ['Käse', 'Brie', 'Salami', 'Pute', 'Schinken', 'Kräuterquark', 'Sonstiges'];
+                optionen.forEach(option => {
+                    detailSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else if (artikel.includes('Premiumbelag')) {
+                detailContainer.style.display = 'block';
+                detailLabel.textContent = 'Premium-Belag:';
+                const optionen = ['Blauschimmelkäse', 'Lachs', 'Krabben', 'Sonstiges'];
+                optionen.forEach(option => {
+                    detailSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else if (artikel.includes('Bagel')) {
+                detailContainer.style.display = 'block';
+                detailLabel.textContent = 'Bagel-Belag:';
+                const optionen = ['Tomate Mozzarella', 'Salami', 'Schinken', 'Käse', 'Schinken-Käse'];
+                optionen.forEach(option => {
+                    detailSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else if (artikel === 'Muffins') {
+                detailContainer.style.display = 'block';
+                detailLabel.textContent = 'Muffin-Geschmack:';
+                const optionen = ['Blaubeere', 'Apfel', 'Marmor', 'Schoko'];
+                optionen.forEach(option => {
+                    detailSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else if (artikel === 'Donuts') {
+                detailContainer.style.display = 'block';
+                detailLabel.textContent = 'Donut-Geschmack:';
+                const optionen = ['Käsekuchen', 'Vanille', 'Schoko', 'Kaugummi', 'Pinky Crunch'];
+                optionen.forEach(option => {
+                    detailSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else if (artikel === 'Blechkuchen') {
+                detailContainer.style.display = 'block';
+                detailLabel.textContent = 'Kuchen-Sorte:';
+                const optionen = ['Zitronenkuchen', 'Quark-Mandarine', 'Quark-Kirsche', 'Apfelkuchen mit Zimt', 'Butterkuchen mit Mandeln', 'Schokokuchen'];
+                optionen.forEach(option => {
+                    detailSelect.innerHTML += `<option value="${option}">${option}</option>`;
+                });
+            } else {
+                detailContainer.style.display = 'none';
+            }
+        }
+        
+        // Detail-Optionen zurücksetzen
+        function resetDetailOptionen(detailId) {
+            const detailContainer = document.getElementById(`detail-container-${detailId}`);
+            if (detailContainer) {
+                detailContainer.style.display = 'none';
+            }
         }
         
         // Speisen sammeln
@@ -669,12 +836,27 @@
             
             // Nachspeisen sammeln
             document.querySelectorAll('#nachspeisen-container .speise-block').forEach((block) => {
-                const select = block.querySelector('select');
+                const kategorieSelect = block.querySelector('select');
+                const geschmackSelect = block.querySelectorAll('select')[1]; // Zweites Select-Element
+                const detailSelect = block.querySelectorAll('select')[2]; // Drittes Select-Element (falls vorhanden)
                 const anzahl = block.querySelector('input[type="number"]');
                 
-                if (select && anzahl && select.value !== '-- Bitte wählen --' && parseInt(anzahl.value) > 0) {
+                if (kategorieSelect && geschmackSelect && anzahl && 
+                    kategorieSelect.value !== '-- Bitte wählen --' && 
+                    geschmackSelect.value !== '-- Geschmack wählen --' && 
+                    geschmackSelect.value !== '-- Erst Kategorie wählen --' && 
+                    parseInt(anzahl.value) > 0) {
+                    
+                    let speiseText = geschmackSelect.value;
+                    
+                    // Wenn Detail-Auswahl vorhanden und ausgewählt, anhängen
+                    if (detailSelect && detailSelect.value && detailSelect.value !== '-- Bitte wählen --' && detailSelect.value !== '-- Erst Artikel wählen --') {
+                        speiseText += ` (${detailSelect.value})`;
+                    }
+                    
                     nachspeisen.push({
-                        speise: select.value,
+                        kategorie: kategorieSelect.value,
+                        speise: speiseText,
                         anzahl: parseInt(anzahl.value)
                     });
                 }
@@ -752,6 +934,8 @@
             document.getElementById('vorspeisen-container').innerHTML = '';
             document.getElementById('hauptspeisen-container').innerHTML = '';
             document.getElementById('nachspeisen-container').innerHTML = '';
+            
+            alert('Auftrag erfolgreich gespeichert!');
         }
         
         // Berechnungsfunktionen
@@ -866,7 +1050,8 @@
                     auftrag.nachspeisen.forEach(n => {
                         const gewicht = n.anzahl * 120;
                         const gewichtText = gewicht >= 1000 ? `${(gewicht/1000).toFixed(1)} kg` : `${gewicht} g`;
-                        speisenHtml += `• ${n.speise} (${n.anzahl} Pers., ${gewichtText})<br>`;
+                        const kategorieText = n.kategorie ? `[${n.kategorie}] ` : '';
+                        speisenHtml += `• ${kategorieText}${n.speise} (${n.anzahl} Pers., ${gewichtText})<br>`;
                     });
                 }
                 
@@ -1075,7 +1260,12 @@
         
         // Druck- und Backup-Funktionen
         function druckeAuswahl() {
-            alert('Druckfunktion ist vereinfacht implementiert.');
+            const ausgewaehlte = document.querySelectorAll('.druckauswahl:checked');
+            if (ausgewaehlte.length === 0) {
+                alert('Bitte wählen Sie mindestens einen Auftrag aus.');
+                return;
+            }
+            alert(`${ausgewaehlte.length} Auftrag/Aufträge zum Drucken ausgewählt. Druckfunktion ist vereinfacht implementiert.`);
         }
         
         function exportiereBackup() {
@@ -1089,7 +1279,7 @@
                         <title>Backup-Daten</title>
                         <style>
                             body { font-family: monospace; margin: 20px; }
-                            pre { background: #f5f5f5; padding: 20px; border-radius: 5px; }
+                            pre { background: #f5f5f5; padding: 20px; border-radius: 5px; white-space: pre-wrap; }
                         </style>
                     </head>
                     <body>
@@ -1163,7 +1353,7 @@
             updateStats();
             zeigeAuftraege();
             updateBedarfsWochen();
-            console.log('Partyservice Kleinfeldt - Auftragserfassung geladen');
+            console.log('Partyservice Kleinfeldt - Auftragserfassung vollständig geladen');
         };
     </script>
 </body>
